@@ -131,15 +131,15 @@ class AbstractFormatter:
         label = ''
         for c in format:
             if c == '1':
-                label = label + ('%d' % counter)
+                label += '%d' % counter
             elif c in 'aA':
                 if counter > 0:
-                    label = label + self.format_letter(c, counter)
+                    label += self.format_letter(c, counter)
             elif c in 'iI':
                 if counter > 0:
-                    label = label + self.format_roman(c, counter)
+                    label += self.format_roman(c, counter)
             else:
-                label = label + c
+                label += c
         return label
 
     def format_letter(self, case, counter):
@@ -172,7 +172,7 @@ class AbstractFormatter:
                     s = ''
                 s = s + ones[index]*x
                 label = s + label
-            index = index + 1
+            index += 1
         if case == 'I':
             return label.upper()
         return label
@@ -186,9 +186,8 @@ class AbstractFormatter:
             return
         elif prespace or self.softspace:
             if not data:
-                if not self.nospace:
-                    self.softspace = 1
-                    self.parskip = 0
+                self.softspace = 1
+                self.parskip = 0
                 return
             if not self.nospace:
                 data = ' ' + data
@@ -250,10 +249,7 @@ class AbstractFormatter:
     def pop_font(self):
         if self.font_stack:
             del self.font_stack[-1]
-        if self.font_stack:
-            font = self.font_stack[-1]
-        else:
-            font = None
+        font = self.font_stack[-1] if self.font_stack else None
         self.writer.new_font(font)
 
     def push_margin(self, margin):
@@ -267,10 +263,7 @@ class AbstractFormatter:
         if self.margin_stack:
             del self.margin_stack[-1]
         fstack = [m for m in self.margin_stack if m]
-        if fstack:
-            margin = fstack[-1]
-        else:
-            margin = None
+        margin = fstack[-1] if fstack else None
         self.writer.new_margin(margin, len(fstack))
 
     def set_spacing(self, spacing):

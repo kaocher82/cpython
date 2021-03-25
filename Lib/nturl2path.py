@@ -17,7 +17,7 @@ def url2pathname(url):
     import string, urllib.parse
     # Windows itself uses ":" even in URLs.
     url = url.replace(':', '|')
-    if not '|' in url:
+    if '|' not in url:
         # No drive specifier, just convert slashes
         if url[:4] == '////':
             # path is something like ////host/path/on/remote/host
@@ -50,7 +50,7 @@ def pathname2url(p):
     # becomes
     #   ///C:/foo/bar/spam.foo
     import urllib.parse
-    if not ':' in p:
+    if ':' not in p:
         # No drive specifier, just convert slashes and quote the name
         if p[:2] == '\\\\':
         # path is something like \\host\path\on\remote\host

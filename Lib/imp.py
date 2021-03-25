@@ -141,20 +141,19 @@ class _HackedGetData:
 
     def get_data(self, path):
         """Gross hack to contort loader to deal w/ load_*()'s bad API."""
-        if self.file and path == self.path:
-            # The contract of get_data() requires us to return bytes. Reopen the
-            # file in binary mode if needed.
-            if not self.file.closed:
-                file = self.file
-                if 'b' not in file.mode:
-                    file.close()
-            if self.file.closed:
-                self.file = file = open(self.path, 'rb')
-
-            with file:
-                return file.read()
-        else:
+        if not self.file or path != self.path:
             return super().get_data(path)
+        # The contract of get_data() requires us to return bytes. Reopen the
+        # file in binary mode if needed.
+        if not self.file.closed:
+            file = self.file
+            if 'b' not in file.mode:
+                file.close()
+        if self.file.closed:
+            self.file = file = open(self.path, 'rb')
+
+        with file:
+            return file.read()
 
 
 class _LoadSourceCompatibility(_HackedGetData, machinery.SourceFileLoader):
@@ -165,10 +164,7 @@ class _LoadSourceCompatibility(_HackedGetData, machinery.SourceFileLoader):
 def load_source(name, pathname, file=None):
     loader = _LoadSourceCompatibility(name, pathname, file)
     spec = util.spec_from_file_location(name, pathname, loader=loader)
-    if name in sys.modules:
-        module = _exec(spec, sys.modules[name])
-    else:
-        module = _load(spec)
+    module = _exec(spec, sys.modules[name]) if name in sys.modules else _load(spec)
     # To allow reloading to potentially work, use a non-hacked loader which
     # won't rely on a now-closed file object.
     module.__loader__ = machinery.SourceFileLoader(name, pathname)
@@ -185,10 +181,7 @@ def load_compiled(name, pathname, file=None):
     """**DEPRECATED**"""
     loader = _LoadCompiledCompatibility(name, pathname, file)
     spec = util.spec_from_file_location(name, pathname, loader=loader)
-    if name in sys.modules:
-        module = _exec(spec, sys.modules[name])
-    else:
-        module = _load(spec)
+    module = _exec(spec, sys.modules[name]) if name in sys.modules else _load(spec)
     # To allow reloading to potentially work, use a non-hacked loader which
     # won't rely on a now-closed file object.
     module.__loader__ = SourcelessFileLoader(name, pathname)

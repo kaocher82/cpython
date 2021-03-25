@@ -326,10 +326,7 @@ def isabstract(object):
 def getmembers(object, predicate=None):
     """Return all members of an object as (name, value) pairs sorted by name.
     Optionally, only return members that satisfy a given predicate."""
-    if isclass(object):
-        mro = (object,) + getmro(object)
-    else:
-        mro = ()
+    mro = (object,) + getmro(object) if isclass(object) else ()
     results = []
     processed = set()
     names = dir(object)
@@ -1596,9 +1593,11 @@ def _shadowed_dict(klass):
         except KeyError:
             pass
         else:
-            if not (type(class_dict) is types.GetSetDescriptorType and
-                    class_dict.__name__ == "__dict__" and
-                    class_dict.__objclass__ is entry):
+            if (
+                type(class_dict) is not types.GetSetDescriptorType
+                or class_dict.__name__ != "__dict__"
+                or class_dict.__objclass__ is not entry
+            ):
                 return class_dict
     return _sentinel
 
@@ -1625,10 +1624,15 @@ def getattr_static(obj, attr, default=_sentinel):
 
     klass_result = _check_class(klass, attr)
 
-    if instance_result is not _sentinel and klass_result is not _sentinel:
-        if (_check_class(type(klass_result), '__get__') is not _sentinel and
-            _check_class(type(klass_result), '__set__') is not _sentinel):
-            return klass_result
+    if (
+        instance_result is not _sentinel
+        and klass_result is not _sentinel
+        and (
+            _check_class(type(klass_result), '__get__') is not _sentinel
+            and _check_class(type(klass_result), '__set__') is not _sentinel
+        )
+    ):
+        return klass_result
 
     if instance_result is not _sentinel:
         return instance_result
@@ -1970,7 +1974,7 @@ def _signature_strip_non_python_syntax(signature):
                     current_parameter += 1
                 continue
 
-            if string == '/':
+            elif string == '/':
                 assert not skip_next_comma
                 assert last_positional_only is None
                 skip_next_comma = True
@@ -1984,7 +1988,7 @@ def _signature_strip_non_python_syntax(signature):
 
         if delayed_comma:
             delayed_comma = False
-            if not ((type == OP) and (string == ')')):
+            if type != OP or string != ')':
                 add(', ')
         add(string)
         if (string == ','):
@@ -2177,11 +2181,7 @@ def _signature_from_function(cls, func, skip_bound_arg=True):
     defaults = func.__defaults__
     kwdefaults = func.__kwdefaults__
 
-    if defaults:
-        pos_default_count = len(defaults)
-    else:
-        pos_default_count = 0
-
+    pos_default_count = len(defaults) if defaults else 0
     parameters = []
 
     non_default_count = pos_count - pos_default_count
@@ -2317,12 +2317,11 @@ def _signature_from_callable(obj, *,
                 # First argument of the wrapped callable is `*args`, as in
                 # `partialmethod(lambda *args)`.
                 return sig
-            else:
-                sig_params = tuple(sig.parameters.values())
-                assert (not sig_params or
-                        first_wrapped_param is not sig_params[0])
-                new_params = (first_wrapped_param,) + sig_params
-                return sig.replace(parameters=new_params)
+            sig_params = tuple(sig.parameters.values())
+            assert (not sig_params or
+                    first_wrapped_param is not sig_params[0])
+            new_params = (first_wrapped_param,) + sig_params
+            return sig.replace(parameters=new_params)
 
     if isfunction(obj) or _signature_is_functionlike(obj):
         # If it's a pure Python function, or an object that is duck type
@@ -2517,11 +2516,10 @@ class Parameter:
             self._kind = _ParameterKind(kind)
         except ValueError:
             raise ValueError(f'value {kind!r} is not a valid Parameter.kind')
-        if default is not _empty:
-            if self._kind in (_VAR_POSITIONAL, _VAR_KEYWORD):
-                msg = '{} parameters cannot have default values'
-                msg = msg.format(self._kind.description)
-                raise ValueError(msg)
+        if default is not _empty and self._kind in (_VAR_POSITIONAL, _VAR_KEYWORD):
+            msg = '{} parameters cannot have default values'
+            msg = msg.format(self._kind.description)
+            raise ValueError(msg)
         self._default = default
         self._annotation = annotation
 
@@ -2759,9 +2757,7 @@ class BoundArguments:
         return {'_signature': self._signature, 'arguments': self.arguments}
 
     def __repr__(self):
-        args = []
-        for arg, value in self.arguments.items():
-            args.append('{}={!r}'.format(arg, value))
+        args = ['{}={!r}'.format(arg, value) for arg, value in self.arguments.items()]
         return '<{} ({})>'.format(self.__class__.__name__, ', '.join(args))
 
 
@@ -2992,8 +2988,7 @@ class Signature:
                         # We have an '*args'-like argument, let's fill it with
                         # all positional arguments we have left and move on to
                         # the next phase
-                        values = [arg_val]
-                        values.extend(arg_vals)
+                        values = [arg_val, *arg_vals]
                         arguments[param.name] = tuple(values)
                         break
 

@@ -230,13 +230,12 @@ class ParserBase:
                 j = j + 1
                 while j < n and rawdata[j].isspace():
                     j = j + 1
-                if j < n:
-                    if rawdata[j] == ">":
-                        return j
-                    self.updatepos(declstartpos, j)
-                    self.error("unexpected char after internal subset")
-                else:
+                if j >= n:
                     return -1
+                if rawdata[j] == ">":
+                    return j
+                self.updatepos(declstartpos, j)
+                self.error("unexpected char after internal subset")
             elif c.isspace():
                 j = j + 1
             else:

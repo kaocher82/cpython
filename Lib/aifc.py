@@ -171,10 +171,7 @@ def _read_ushort(file):
 
 def _read_string(file):
     length = ord(file.read(1))
-    if length == 0:
-        data = b''
-    else:
-        data = file.read(length)
+    data = b'' if length == 0 else file.read(length)
     if length & 1 == 0:
         dummy = file.read(1)
     return data
@@ -485,7 +482,7 @@ class Aifc_read:
             if kludge:
                 length = ord(chunk.file.read(1))
                 if length & 1 == 0:
-                    length = length + 1
+                    length += 1
                 chunk.chunksize = chunk.chunksize + length
                 chunk.file.seek(-1, 1)
             #DEBUG end
@@ -509,7 +506,7 @@ class Aifc_read:
         # Some files appear to contain invalid counts.
         # Cope with this by testing for EOF.
         try:
-            for i in range(nmarkers):
+            for _ in range(nmarkers):
                 id = _read_short(chunk)
                 pos = _read_long(chunk)
                 name = _read_string(chunk)
@@ -779,20 +776,22 @@ class Aifc_write:
         return data
 
     def _ensure_header_written(self, datasize):
-        if not self._nframeswritten:
-            if self._comptype in (b'ULAW', b'ulaw', b'ALAW', b'alaw', b'G722'):
-                if not self._sampwidth:
-                    self._sampwidth = 2
-                if self._sampwidth != 2:
-                    raise Error('sample width must be 2 when compressing '
-                                'with ulaw/ULAW, alaw/ALAW or G7.22 (ADPCM)')
-            if not self._nchannels:
-                raise Error('# channels not specified')
+        if self._nframeswritten:
+            return
+
+        if self._comptype in (b'ULAW', b'ulaw', b'ALAW', b'alaw', b'G722'):
             if not self._sampwidth:
-                raise Error('sample width not specified')
-            if not self._framerate:
-                raise Error('sampling rate not specified')
-            self._write_header(datasize)
+                self._sampwidth = 2
+            if self._sampwidth != 2:
+                raise Error('sample width must be 2 when compressing '
+                            'with ulaw/ULAW, alaw/ALAW or G7.22 (ADPCM)')
+        if not self._nchannels:
+            raise Error('# channels not specified')
+        if not self._sampwidth:
+            raise Error('sample width not specified')
+        if not self._framerate:
+            raise Error('sampling rate not specified')
+        self._write_header(datasize)
 
     def _init_compression(self):
         if self._comptype == b'G722':
@@ -897,7 +896,7 @@ class Aifc_write:
             id, pos, name = marker
             length = length + len(name) + 1 + 6
             if len(name) & 1 == 0:
-                length = length + 1
+                length += 1
         _write_ulong(self._file, length)
         self._marklength = length + 8
         _write_short(self._file, len(self._markers))
@@ -909,10 +908,7 @@ class Aifc_write:
 
 def open(f, mode=None):
     if mode is None:
-        if hasattr(f, 'mode'):
-            mode = f.mode
-        else:
-            mode = 'rb'
+        mode = f.mode if hasattr(f, 'mode') else 'rb'
     if mode in ('r', 'rb'):
         return Aifc_read(f)
     elif mode in ('w', 'wb'):

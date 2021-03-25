@@ -623,7 +623,7 @@ class SequenceMatcher:
                 group = []
                 i1, j1 = max(i1, i2-n), max(j1, j2-n)
             group.append((tag, i1, i2, j1 ,j2))
-        if group and not (len(group)==1 and group[0][0] == 'equal'):
+        if group and (len(group) != 1 or group[0][0] != 'equal'):
             yield group
 
     def ratio(self):
@@ -671,13 +671,10 @@ class SequenceMatcher:
         avail = {}
         availhas, matches = avail.__contains__, 0
         for elt in self.a:
-            if availhas(elt):
-                numb = avail[elt]
-            else:
-                numb = fullbcount.get(elt, 0)
+            numb = avail[elt] if availhas(elt) else fullbcount.get(elt, 0)
             avail[elt] = numb - 1
             if numb > 0:
-                matches = matches + 1
+                matches += 1
         return _calculate_ratio(matches, len(self.a) + len(self.b))
 
     def real_quick_ratio(self):
@@ -1497,7 +1494,7 @@ def _mdiff(fromlines, tolines, context=None, linejunk=None,
             # so we can do some very readable comparisons.
             while len(lines) < 4:
                 lines.append(next(diff_lines_iterator, 'X'))
-            s = ''.join([line[0] for line in lines])
+            s = ''.join(line[0] for line in lines)
             if s.startswith('X'):
                 # When no more lines, pump out any remaining blank lines so the
                 # corresponding add/delete lines get a matching blank line so
@@ -1580,7 +1577,7 @@ def _mdiff(fromlines, tolines, context=None, linejunk=None,
         fromlines,tolines=[],[]
         while True:
             # Collecting lines of text until we have a from/to pair
-            while (len(fromlines)==0 or len(tolines)==0):
+            while not fromlines or not tolines:
                 try:
                     from_line, to_line, found_diff = next(line_iterator)
                 except StopIteration:
@@ -1822,14 +1819,12 @@ class HtmlDiff(object):
             if text[i] == '\0':
                 i += 1
                 mark = text[i]
-                i += 1
             elif text[i] == '\1':
-                i += 1
                 mark = ''
             else:
-                i += 1
                 n += 1
 
+            i += 1
         # wrap point is inside text, break it up into separate lines
         line1 = text[:i]
         line2 = text[i:]
@@ -1865,14 +1860,8 @@ class HtmlDiff(object):
             # yield from/to line in pairs inserting blank lines as
             # necessary when one side has more wrapped lines
             while fromlist or tolist:
-                if fromlist:
-                    fromdata = fromlist.pop(0)
-                else:
-                    fromdata = ('',' ')
-                if tolist:
-                    todata = tolist.pop(0)
-                else:
-                    todata = ('',' ')
+                fromdata = fromlist.pop(0) if fromlist else ('', ' ')
+                todata = tolist.pop(0) if tolist else ('', ' ')
                 yield fromdata,todata,flag
 
     def _collect_lines(self,diffs):
@@ -2004,10 +1993,7 @@ class HtmlDiff(object):
         fromlines,tolines = self._tab_newline_replace(fromlines,tolines)
 
         # create diffs iterator which generates side by side from/to data
-        if context:
-            context_lines = numlines
-        else:
-            context_lines = None
+        context_lines = numlines if context else None
         diffs = _mdiff(fromlines,tolines,context_lines,linejunk=self._linejunk,
                       charjunk=self._charjunk)
 

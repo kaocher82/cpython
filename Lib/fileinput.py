@@ -194,10 +194,7 @@ class FileInput:
         else:
             if files is None:
                 files = sys.argv[1:]
-            if not files:
-                files = ('-',)
-            else:
-                files = tuple(files)
+            files = ('-', ) if not files else tuple(files)
         self._files = files
         self._inplace = inplace
         self._backup = backup
@@ -419,8 +416,10 @@ def _test():
     backup = False
     opts, args = getopt.getopt(sys.argv[1:], "ib:")
     for o, a in opts:
-        if o == '-i': inplace = True
-        if o == '-b': backup = a
+        if o == '-b':
+            backup = a
+        elif o == '-i':
+            inplace = True
     for line in input(args, inplace=inplace, backup=backup):
         if line[-1:] == '\n': line = line[:-1]
         if line[-1:] == '\r': line = line[:-1]

@@ -320,13 +320,7 @@ def _splitlines_no_ff(source):
 
 def _pad_whitespace(source):
     r"""Replace all chars except '\f\t' in a line with spaces."""
-    result = ''
-    for c in source:
-        if c in '\f\t':
-            result += c
-        else:
-            result += ' '
-    return result
+    return ''.join(c if c in '\f\t' else ' ' for c in source)
 
 
 def get_source_segment(source, node, *, padded=False):
@@ -1514,11 +1508,11 @@ class _Unparser(NodeVisitor):
             else:
                 self.write(", ")
             self.write("*")
-            if node.vararg:
-                self.write(node.vararg.arg)
-                if node.vararg.annotation:
-                    self.write(": ")
-                    self.traverse(node.vararg.annotation)
+        if node.vararg:
+            self.write(node.vararg.arg)
+            if node.vararg.annotation:
+                self.write(": ")
+                self.traverse(node.vararg.annotation)
 
         # keyword-only arguments
         if node.kwonlyargs:

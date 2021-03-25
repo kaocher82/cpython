@@ -166,11 +166,7 @@ def deepcopy(x, memo=None, _nil=[]):
                         else:
                             raise Error(
                                 "un(deep)copyable object of type %s" % cls)
-                if isinstance(rv, str):
-                    y = x
-                else:
-                    y = _reconstruct(x, memo, *rv)
-
+                y = x if isinstance(rv, str) else _reconstruct(x, memo, *rv)
     # If is its own copy, don't memoize.
     if y is not x:
         memo[d] = y
@@ -282,22 +278,16 @@ def _reconstruct(x, memo, func, args,
                     setattr(y, key, value)
 
     if listiter is not None:
-        if deep:
-            for item in listiter:
+        for item in listiter:
+            if deep:
                 item = deepcopy(item, memo)
-                y.append(item)
-        else:
-            for item in listiter:
-                y.append(item)
+            y.append(item)
     if dictiter is not None:
-        if deep:
-            for key, value in dictiter:
+        for key, value in dictiter:
+            if deep:
                 key = deepcopy(key, memo)
                 value = deepcopy(value, memo)
-                y[key] = value
-        else:
-            for key, value in dictiter:
-                y[key] = value
+            y[key] = value
     return y
 
 del types, weakref, PyStringMap

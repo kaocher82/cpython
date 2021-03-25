@@ -85,9 +85,7 @@ class Annotations(dict):
             if name.startswith("c."):
                 name = name[2:]
             entry = self.get(name)
-            if not entry:
-                continue
-            elif not entry.result_type.endswith("Object*"):
+            if not entry or entry and not entry.result_type.endswith("Object*"):
                 continue
             if entry.result_refs is None:
                 rc = 'Return value: Always NULL.'

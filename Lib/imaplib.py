@@ -253,12 +253,11 @@ class IMAP4:
             raise self.error(self.welcome)
 
         self._get_capabilities()
-        if __debug__:
-            if self.debug >= 3:
-                self._mesg('CAPABILITIES: %r' % (self.capabilities,))
+        if __debug__ and self.debug >= 3:
+            self._mesg('CAPABILITIES: %r' % (self.capabilities,))
 
         for version in AllowedVersions:
-            if not version in self.capabilities:
+            if version not in self.capabilities:
                 continue
             self.PROTOCOL_VERSION = version
             return
@@ -406,10 +405,7 @@ class IMAP4:
                 flags = '(%s)' % flags
         else:
             flags = None
-        if date_time:
-            date_time = Time2Internaldate(date_time)
-        else:
-            date_time = None
+        date_time = Time2Internaldate(date_time) if date_time else None
         literal = MapCRLF.sub(CRLF, message)
         if self.utf8_enabled:
             literal = b'UTF8 (' + literal + b')'
@@ -678,9 +674,8 @@ class IMAP4:
 
         (typ, [data]) = <instance>.noop()
         """
-        if __debug__:
-            if self.debug >= 3:
-                self._dump_ur(self.untagged_responses)
+        if __debug__ and self.debug >= 3:
+            self._dump_ur(self.untagged_responses)
         return self._simple_command('NOOP')
 
 
@@ -749,10 +744,7 @@ class IMAP4:
         """
         self.untagged_responses = {}    # Flush old responses.
         self.is_readonly = readonly
-        if readonly:
-            name = 'EXAMINE'
-        else:
-            name = 'SELECT'
+        name = 'EXAMINE' if readonly else 'SELECT'
         typ, dat = self._simple_command(name, mailbox)
         if typ != 'OK':
             self.state = 'AUTH'     # Might have been 'SELECTED'
@@ -760,9 +752,8 @@ class IMAP4:
         self.state = 'SELECTED'
         if 'READ-ONLY' in self.untagged_responses \
                 and not readonly:
-            if __debug__:
-                if self.debug >= 1:
-                    self._dump_ur(self.untagged_responses)
+            if __debug__ and self.debug >= 1:
+                self._dump_ur(self.untagged_responses)
             raise self.readonly('%s is not writable' % mailbox)
         return typ, self.untagged_responses.get('EXISTS', [None])
 
@@ -818,14 +809,13 @@ class IMAP4:
         if ssl_context is None:
             ssl_context = ssl._create_stdlib_context()
         typ, dat = self._simple_command(name)
-        if typ == 'OK':
-            self.sock = ssl_context.wrap_socket(self.sock,
-                                                server_hostname=self.host)
-            self.file = self.sock.makefile('rb')
-            self._tls_established = True
-            self._get_capabilities()
-        else:
+        if typ != 'OK':
             raise self.error("Couldn't establish TLS session")
+        self.sock = ssl_context.wrap_socket(self.sock,
+                                            server_hostname=self.host)
+        self.file = self.sock.makefile('rb')
+        self._tls_established = True
+        self._get_capabilities()
         return self._untagged_response(typ, dat, name)
 
 
@@ -879,7 +869,7 @@ class IMAP4:
         Returns response appropriate to 'command'.
         """
         command = command.upper()
-        if not command in Commands:
+        if command not in Commands:
             raise self.error("Unknown IMAP4 UID command: %s" % command)
         if self.state not in Commands[command]:
             raise self.error("command %s illegal in state %s, "
@@ -888,10 +878,7 @@ class IMAP4:
                               ', '.join(Commands[command])))
         name = 'UID'
         typ, dat = self._simple_command(name, command, *args)
-        if command in ('SEARCH', 'SORT', 'THREAD'):
-            name = command
-        else:
-            name = 'FETCH'
+        name = command if command in ('SEARCH', 'SORT', 'THREAD') else 'FETCH'
         return self._untagged_response(typ, dat, name)
 
 
@@ -932,7 +919,7 @@ class IMAP4:
         name = name.upper()
         #if not name in self.capabilities:      # Let the server decide!
         #    raise self.error('unknown extension command: %s' % name)
-        if not name in Commands:
+        if name not in Commands:
             Commands[name] = (self.state,)
         return self._simple_command(name, *args)
 
@@ -945,10 +932,9 @@ class IMAP4:
         if dat is None:
             dat = b''
         ur = self.untagged_responses
-        if __debug__:
-            if self.debug >= 5:
-                self._mesg('untagged_responses[%s] %s += ["%r"]' %
-                        (typ, len(ur.get(typ,'')), dat))
+        if __debug__ and self.debug >= 5:
+            self._mesg('untagged_responses[%s] %s += ["%r"]' %
+                    (typ, len(ur.get(typ,'')), dat))
         if typ in ur:
             ur[typ].append(dat)
         else:
@@ -1022,9 +1008,8 @@ class IMAP4:
             if literator:
                 literal = literator(self.continuation_response)
 
-            if __debug__:
-                if self.debug >= 4:
-                    self._mesg('write literal size %s' % len(literal))
+            if __debug__ and self.debug >= 4:
+                self._mesg('write literal size %s' % len(literal))
 
             try:
                 self.send(literal)
@@ -1078,7 +1063,7 @@ class IMAP4:
 
         if self._match(self.tagre, resp):
             tag = self.mo.group('tag')
-            if not tag in self.tagged_commands:
+            if tag not in self.tagged_commands:
                 raise self.abort('unexpected tagged response: %r' % resp)
 
             typ = self.mo.group('type')
@@ -1090,9 +1075,10 @@ class IMAP4:
 
             # '*' (untagged) responses?
 
-            if not self._match(Untagged_response, resp):
-                if self._match(self.Untagged_status, resp):
-                    dat2 = self.mo.group('data2')
+            if not self._match(Untagged_response, resp) and self._match(
+                self.Untagged_status, resp
+            ):
+                dat2 = self.mo.group('data2')
 
             if self.mo is None:
                 # Only other possibility is '+' (continuation) response...
@@ -1116,9 +1102,8 @@ class IMAP4:
                 # Read literal direct from connection.
 
                 size = int(self.mo.group('size'))
-                if __debug__:
-                    if self.debug >= 4:
-                        self._mesg('read literal size %s' % size)
+                if __debug__ and self.debug >= 4:
+                    self._mesg('read literal size %s' % size)
                 data = self.read(size)
 
                 # Store response with literal as tuple
@@ -1138,9 +1123,8 @@ class IMAP4:
             typ = str(typ, self._encoding)
             self._append_untagged(typ, self.mo.group('data'))
 
-        if __debug__:
-            if self.debug >= 1 and typ in ('NO', 'BAD', 'BYE'):
-                self._mesg('%s response: %r' % (typ, dat))
+        if __debug__ and self.debug >= 1 and typ in ('NO', 'BAD', 'BYE'):
+            self._mesg('%s response: %r' % (typ, dat))
 
         return resp
 
@@ -1172,9 +1156,8 @@ class IMAP4:
             try:
                 self._get_response()
             except self.abort as val:
-                if __debug__:
-                    if self.debug >= 1:
-                        self.print_log()
+                if __debug__ and self.debug >= 1:
+                    self.print_log()
                 raise
 
 
@@ -1203,9 +1186,8 @@ class IMAP4:
         # Save result, return success.
 
         self.mo = cre.match(s)
-        if __debug__:
-            if self.mo is not None and self.debug >= 5:
-                self._mesg("\tmatched %r => %r" % (cre.pattern, self.mo.groups()))
+        if __debug__ and self.mo is not None and self.debug >= 5:
+            self._mesg("\tmatched %r => %r" % (cre.pattern, self.mo.groups()))
         return self.mo is not None
 
 
@@ -1233,12 +1215,11 @@ class IMAP4:
     def _untagged_response(self, typ, dat, name):
         if typ == 'NO':
             return typ, dat
-        if not name in self.untagged_responses:
+        if name not in self.untagged_responses:
             return typ, [None]
         data = self.untagged_responses.pop(name)
-        if __debug__:
-            if self.debug >= 5:
-                self._mesg('untagged_responses[%s] => %s' % (name, data))
+        if __debug__ and self.debug >= 5:
+            self._mesg('untagged_responses[%s] => %s' % (name, data))
         return typ, data
 
 
@@ -1432,7 +1413,7 @@ class _Authenticator:
                 inp = b''
             e = binascii.b2a_base64(t)
             if e:
-                oup = oup + e[:-1]
+                oup += e[:-1]
         return oup
 
     def decode(self, inp):

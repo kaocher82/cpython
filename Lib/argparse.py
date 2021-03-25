@@ -115,10 +115,8 @@ class _AttributeHolder(object):
 
     def __repr__(self):
         type_name = type(self).__name__
-        arg_strings = []
         star_args = {}
-        for arg in self._get_args():
-            arg_strings.append(repr(arg))
+        arg_strings = [repr(arg) for arg in self._get_args()]
         for name, value in self._get_kwargs():
             if name.isidentifier():
                 arg_strings.append('%s=%r' % (name, value))
@@ -287,9 +285,8 @@ class HelpFormatter(object):
         return help
 
     def _join_parts(self, part_strings):
-        return ''.join([part
-                        for part in part_strings
-                        if part and part is not SUPPRESS])
+        return ''.join(part for part in part_strings
+                            if part and part is not SUPPRESS)
 
     def _format_usage(self, usage, actions, groups, prefix):
         if prefix is None:
@@ -342,10 +339,7 @@ class HelpFormatter(object):
                 def get_lines(parts, indent, prefix=None):
                     lines = []
                     line = []
-                    if prefix is not None:
-                        line_len = len(prefix) - 1
-                    else:
-                        line_len = len(indent) - 1
+                    line_len = len(prefix) - 1 if prefix is not None else len(indent) - 1
                     for part in parts:
                         if line_len + 1 + len(part) > text_width and line:
                             lines.append(indent + ' '.join(line))
@@ -621,7 +615,7 @@ class HelpFormatter(object):
             if hasattr(params[name], '__name__'):
                 params[name] = params[name].__name__
         if params.get('choices') is not None:
-            choices_str = ', '.join([str(c) for c in params['choices']])
+            choices_str = ', '.join(str(c) for c in params['choices'])
             params['choices'] = choices_str
         return self._get_help_string(action) % params
 
@@ -690,11 +684,10 @@ class ArgumentDefaultsHelpFormatter(HelpFormatter):
 
     def _get_help_string(self, action):
         help = action.help
-        if '%(default)' not in action.help:
-            if action.default is not SUPPRESS:
-                defaulting_nargs = [OPTIONAL, ZERO_OR_MORE]
-                if action.option_strings or action.nargs in defaulting_nargs:
-                    help += ' (default: %(default)s)'
+        if '%(default)' not in action.help and action.default is not SUPPRESS:
+            defaulting_nargs = [OPTIONAL, ZERO_OR_MORE]
+            if action.option_strings or action.nargs in defaulting_nargs:
+                help += ' (default: %(default)s)'
         return help
 
 
@@ -1457,9 +1450,11 @@ class _ActionsContainer(object):
 
         # set the flag if any option strings look like negative numbers
         for option_string in action.option_strings:
-            if self._negative_number_matcher.match(option_string):
-                if not self._has_negative_number_optionals:
-                    self._has_negative_number_optionals.append(True)
+            if (
+                self._negative_number_matcher.match(option_string)
+                and not self._has_negative_number_optionals
+            ):
+                self._has_negative_number_optionals.append(True)
 
         # return the created action
         return action
@@ -1529,7 +1524,7 @@ class _ActionsContainer(object):
         long_option_strings = []
         for option_string in args:
             # error on strings that don't start with an appropriate prefix
-            if not option_string[0] in self.prefix_chars:
+            if option_string[0] not in self.prefix_chars:
                 args = {'option': option_string,
                         'prefix_chars': self.prefix_chars}
                 msg = _('invalid option string %(option)r: '
@@ -1588,9 +1583,8 @@ class _ActionsContainer(object):
         message = ngettext('conflicting option string: %s',
                            'conflicting option strings: %s',
                            len(conflicting_actions))
-        conflict_string = ', '.join([option_string
-                                     for option_string, action
-                                     in conflicting_actions])
+        conflict_string = ', '.join(option_string for option_string, action
+                                         in conflicting_actions)
         raise ArgumentError(action, message % conflict_string)
 
     def _handle_conflict_resolve(self, action, conflicting_actions):
@@ -2163,8 +2157,7 @@ class ArgumentParser(_AttributeHolder, _ActionsContainer):
         result = []
         for i in range(len(actions), 0, -1):
             actions_slice = actions[:i]
-            pattern = ''.join([self._get_nargs_pattern(action)
-                               for action in actions_slice])
+            pattern = ''.join(self._get_nargs_pattern(action) for action in actions_slice)
             match = _re.match(pattern, arg_strings_pattern)
             if match is not None:
                 result.extend([len(string) for string in match.groups()])

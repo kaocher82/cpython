@@ -36,10 +36,7 @@ def getcaps():
         with fp:
             morecaps, lineno = _readmailcapfile(fp, lineno)
         for key, value in morecaps.items():
-            if not key in caps:
-                caps[key] = value
-            else:
-                caps[key] = caps[key] + value
+            caps[key] = value if key not in caps else caps[key] + value
     return caps
 
 def listmailcapfiles():
@@ -179,11 +176,11 @@ def findmatch(caps, MIMEtype, key='view', filename="/dev/null", plist=[]):
 def lookup(caps, MIMEtype, key=None):
     entries = []
     if MIMEtype in caps:
-        entries = entries + caps[MIMEtype]
+        entries += caps[MIMEtype]
     MIMEtypes = MIMEtype.split('/')
     MIMEtype = MIMEtypes[0] + '/*'
     if MIMEtype in caps:
-        entries = entries + caps[MIMEtype]
+        entries += caps[MIMEtype]
     if key is not None:
         entries = [e for e in entries if key in e]
     entries = sorted(entries, key=lineno_sort_key)

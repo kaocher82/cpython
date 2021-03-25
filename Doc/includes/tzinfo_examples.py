@@ -11,10 +11,7 @@ SECOND = timedelta(seconds=1)
 import time as _time
 
 STDOFFSET = timedelta(seconds = -_time.timezone)
-if _time.daylight:
-    DSTOFFSET = timedelta(seconds = -_time.altzone)
-else:
-    DSTOFFSET = STDOFFSET
+DSTOFFSET = timedelta(seconds=-_time.altzone) if _time.daylight else STDOFFSET
 
 DSTDIFF = DSTOFFSET - STDOFFSET
 
@@ -93,7 +90,7 @@ DSTEND_1967_1986 = DSTEND_1987_2006
 def us_dst_range(year):
     # Find start and end times for US DST. For years before 1967, return
     # start = end for no DST.
-    if 2006 < year:
+    if year > 2006:
         dststart, dstend = DSTSTART_2007, DSTEND_2007
     elif 1986 < year < 2007:
         dststart, dstend = DSTSTART_1987_2006, DSTEND_1987_2006

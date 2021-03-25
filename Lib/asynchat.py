@@ -278,11 +278,11 @@ class simple_producer:
         if len(self.data) > self.buffer_size:
             result = self.data[:self.buffer_size]
             self.data = self.data[self.buffer_size:]
-            return result
         else:
             result = self.data
             self.data = b''
-            return result
+
+        return result
 
 
 # Given 'haystack', see if any prefix of 'needle' is at its end.  This

@@ -192,8 +192,8 @@ def _format_offset(off):
         if ss or ss.microseconds:
             s += ":%02d" % ss.seconds
 
-            if ss.microseconds:
-                s += '.%06d' % ss.microseconds
+        if ss.microseconds:
+            s += '.%06d' % ss.microseconds
     return s
 
 # Correctly substitute for %z and %Z escapes in strftime formats.
@@ -283,7 +283,7 @@ def _parse_hh_mm_ss_ff(tstr):
 
     time_comps = [0, 0, 0, 0]
     pos = 0
-    for comp in range(0, 3):
+    for comp in range(3):
         if (len_str - pos) < 2:
             raise ValueError('Incomplete time component')
 
@@ -303,16 +303,15 @@ def _parse_hh_mm_ss_ff(tstr):
     if pos < len_str:
         if tstr[pos] != '.':
             raise ValueError('Invalid microsecond component')
-        else:
-            pos += 1
+        pos += 1
 
-            len_remainder = len_str - pos
-            if len_remainder not in (3, 6):
-                raise ValueError('Invalid microsecond component')
+        len_remainder = len_str - pos
+        if len_remainder not in (3, 6):
+            raise ValueError('Invalid microsecond component')
 
-            time_comps[3] = int(tstr[pos:])
-            if len_remainder == 3:
-                time_comps[3] *= 1000
+        time_comps[3] = int(tstr[pos:])
+        if len_remainder == 3:
+            time_comps[3] *= 1000
 
     return time_comps
 
@@ -555,16 +554,13 @@ class timedelta:
         if isinstance(microseconds, float):
             microseconds = round(microseconds + usdouble)
             seconds, microseconds = divmod(microseconds, 1000000)
-            days, seconds = divmod(seconds, 24*3600)
-            d += days
-            s += seconds
         else:
             microseconds = int(microseconds)
             seconds, microseconds = divmod(microseconds, 1000000)
-            days, seconds = divmod(seconds, 24*3600)
-            d += days
-            s += seconds
             microseconds = round(microseconds + usdouble)
+        days, seconds = divmod(seconds, 24*3600)
+        d += days
+        s += seconds
         assert isinstance(s, int)
         assert isinstance(microseconds, int)
         assert abs(s) <= 3 * 24 * 3600
@@ -1196,15 +1192,9 @@ class tzinfo:
 
     def __reduce__(self):
         getinitargs = getattr(self, "__getinitargs__", None)
-        if getinitargs:
-            args = getinitargs()
-        else:
-            args = ()
+        args = getinitargs() if getinitargs else ()
         getstate = getattr(self, "__getstate__", None)
-        if getstate:
-            state = getstate()
-        else:
-            state = getattr(self, "__dict__", None) or None
+        state = getstate() if getstate else getattr(self, "__dict__", None) or None
         if state is None:
             return (self.__class__, args)
         else:
@@ -1401,10 +1391,7 @@ class time:
     def __hash__(self):
         """Hash."""
         if self._hashcode == -1:
-            if self.fold:
-                t = self.replace(fold=0)
-            else:
-                t = self
+            t = self.replace(fold=0) if self.fold else self
             tzoff = t.utcoffset()
             if not tzoff:  # zero or None
                 self._hashcode = hash(t._getstate()[0])
@@ -1823,11 +1810,11 @@ class datetime(date):
 
     def timestamp(self):
         "Return POSIX timestamp as float"
-        if self._tzinfo is None:
-            s = self._mktime()
-            return s + self.microsecond / 1e6
-        else:
+        if self._tzinfo is not None:
             return (self - _EPOCH).total_seconds()
+
+        s = self._mktime()
+        return s + self.microsecond / 1e6
 
     def utctimetuple(self):
         "Return UTC time tuple compatible with time.gmtime()."
@@ -2144,10 +2131,7 @@ class datetime(date):
 
     def __hash__(self):
         if self._hashcode == -1:
-            if self.fold:
-                t = self.replace(fold=0)
-            else:
-                t = self
+            t = self.replace(fold=0) if self.fold else self
             tzoff = t.utcoffset()
             if tzoff is None:
                 self._hashcode = hash(t._getstate()[0])

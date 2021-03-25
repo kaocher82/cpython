@@ -214,8 +214,8 @@ def format_string(f, val, grouping=False, monetary=False):
     percents = list(_percent_re.finditer(f))
     new_f = _percent_re.sub('%s', f)
 
+    new_val = []
     if isinstance(val, _collections_abc.Mapping):
-        new_val = []
         for perc in percents:
             if perc.group()[-1]=='%':
                 new_val.append('%')
@@ -224,7 +224,6 @@ def format_string(f, val, grouping=False, monetary=False):
     else:
         if not isinstance(val, tuple):
             val = (val,)
-        new_val = []
         i = 0
         for perc in percents:
             if perc.group()[-1]=='%':
@@ -350,10 +349,7 @@ def _test():
 _setlocale = setlocale
 
 def _replace_encoding(code, encoding):
-    if '.' in code:
-        langname = code[:code.index('.')]
-    else:
-        langname = code
+    langname = code[:code.index('.')] if '.' in code else code
     # Convert the encoding to a C lib compatible encoding string
     norm_encoding = encodings.normalize_encoding(encoding)
     #print('norm encoding: %r' % norm_encoding)

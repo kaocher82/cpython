@@ -104,11 +104,11 @@ def win_getpass(prompt='Password: ', stream=None):
     pw = ""
     while 1:
         c = msvcrt.getwch()
-        if c == '\r' or c == '\n':
+        if c in ['\r', '\n']:
             break
         if c == '\003':
             raise KeyboardInterrupt
-        if c == '\b':
+        elif c == '\b':
             pw = pw[:-1]
         else:
             pw = pw + c

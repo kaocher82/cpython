@@ -488,14 +488,10 @@ class StreamReader(Codec):
         # read until we get the required number of characters (if available)
         while True:
             # can the request be satisfied from the character buffer?
-            if chars >= 0:
-                if len(self.charbuffer) >= chars:
-                    break
+            if chars >= 0 and len(self.charbuffer) >= chars:
+                break
             # we need more data
-            if size < 0:
-                newdata = self.stream.read()
-            else:
-                newdata = self.stream.read(size)
+            newdata = self.stream.read() if size < 0 else self.stream.read(size)
             # decode bytes (those remaining from the last call included)
             data = self.bytebuffer + newdata
             if not data:
@@ -503,13 +499,12 @@ class StreamReader(Codec):
             try:
                 newchars, decodedbytes = self.decode(data, self.errors)
             except UnicodeDecodeError as exc:
-                if firstline:
-                    newchars, decodedbytes = \
-                        self.decode(data[:exc.start], self.errors)
-                    lines = newchars.splitlines(keepends=True)
-                    if len(lines)<=1:
-                        raise
-                else:
+                if not firstline:
+                    raise
+                newchars, decodedbytes = \
+                    self.decode(data[:exc.start], self.errors)
+                lines = newchars.splitlines(keepends=True)
+                if len(lines)<=1:
                     raise
             # keep undecoded bytes until the next call
             self.bytebuffer = data[decodedbytes:]
@@ -808,10 +803,7 @@ class StreamRecoder:
 
     def readline(self, size=None):
 
-        if size is None:
-            data = self.reader.readline()
-        else:
-            data = self.reader.readline(size)
+        data = self.reader.readline() if size is None else self.reader.readline(size)
         data, bytesencoded = self.encode(data, self.errors)
         return data
 
@@ -1085,10 +1077,7 @@ def make_encoding_map(decoding_map):
     """
     m = {}
     for k,v in decoding_map.items():
-        if not v in m:
-            m[v] = k
-        else:
-            m[v] = None
+        m[v] = k if v not in m else None
     return m
 
 ### error handlers

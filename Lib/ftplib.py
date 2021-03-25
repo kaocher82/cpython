@@ -548,7 +548,7 @@ class FTP:
         '''Return a list of files in a given directory (default the current).'''
         cmd = 'NLST'
         for arg in args:
-            cmd = cmd + (' ' + arg)
+            cmd += ' ' + arg
         files = []
         self.retrlines(cmd, files.append)
         return files
@@ -565,7 +565,7 @@ class FTP:
             args, func = args[:-1], args[-1]
         for arg in args:
             if arg:
-                cmd = cmd + (' ' + arg)
+                cmd += ' ' + arg
         self.retrlines(cmd, func)
 
     def mlsd(self, path="", facts=[]):
@@ -582,10 +582,7 @@ class FTP:
         '''
         if facts:
             self.sendcmd("OPTS MLST " + ";".join(facts) + ";")
-        if path:
-            cmd = "MLSD %s" % path
-        else:
-            cmd = "MLSD"
+        cmd = "MLSD %s" % path if path else "MLSD"
         lines = []
         self.retrlines(cmd, lines.append)
         for line in lines:
@@ -884,12 +881,12 @@ def parse257(resp):
     n = len(resp)
     while i < n:
         c = resp[i]
-        i = i+1
+        i += 1
         if c == '"':
             if i >= n or resp[i] != '"':
                 break
-            i = i+1
-        dirname = dirname + c
+            i += 1
+        dirname += c
     return dirname
 
 
@@ -938,7 +935,7 @@ def test():
     debugging = 0
     rcfile = None
     while sys.argv[1] == '-d':
-        debugging = debugging+1
+        debugging += 1
         del sys.argv[1]
     if sys.argv[1][:2] == '-r':
         # get name of alternate ~/.netrc file:
