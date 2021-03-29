@@ -206,10 +206,7 @@ class BinHex:
     def _writecrc(self):
         # XXXX Should this be here??
         # self.crc = binascii.crc_hqx('\0\0', self.crc)
-        if self.crc < 0:
-            fmt = '>h'
-        else:
-            fmt = '>H'
+        fmt = '>h' if self.crc < 0 else '>H'
         self.ofp.write(struct.pack(fmt, self.crc))
         self.crc = 0
 
@@ -305,7 +302,7 @@ class _Hqxdecoderengine:
                 if not newdata:
                     raise Error('Premature EOF on binhex file')
                 data = data + newdata
-            decdata = decdata + decdatacur
+            decdata += decdatacur
             wtd = totalwtd - len(decdata)
             if not decdata and not self.eof:
                 raise Error('Premature EOF on binhex file')
@@ -383,11 +380,11 @@ class HexBin:
                 raise Error("No binhex data found")
             # Cater for \r\n terminated lines (which show up as \n\r, hence
             # all lines start with \r)
-            if ch == b'\r':
-                continue
             if ch == b':':
                 break
 
+            elif ch == b'\r':
+                continue
         hqxifp = _Hqxdecoderengine(ifp)
         self.ifp = _Rledecoderengine(hqxifp)
         self.crc = 0
@@ -438,7 +435,7 @@ class HexBin:
             n = self.dlen
         rv = b''
         while len(rv) < n:
-            rv = rv + self._read(n-len(rv))
+            rv += self._read(n-len(rv))
         self.dlen = self.dlen - n
         return rv
 

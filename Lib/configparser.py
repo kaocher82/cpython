@@ -528,19 +528,18 @@ class LegacyInterpolation(Interpolation):
     def before_get(self, parser, section, option, value, vars):
         rawval = value
         depth = MAX_INTERPOLATION_DEPTH
-        while depth:                    # Loop through this until it's done
+        while depth:                # Loop through this until it's done
             depth -= 1
-            if value and "%(" in value:
-                replace = functools.partial(self._interpolation_replace,
-                                            parser=parser)
-                value = self._KEYCRE.sub(replace, value)
-                try:
-                    value = value % vars
-                except KeyError as e:
-                    raise InterpolationMissingOptionError(
-                        option, section, rawval, e.args[0]) from None
-            else:
+            if not value or "%(" not in value:
                 break
+            replace = functools.partial(self._interpolation_replace,
+                                        parser=parser)
+            value = self._KEYCRE.sub(replace, value)
+            try:
+                value = value % vars
+            except KeyError as e:
+                raise InterpolationMissingOptionError(
+                    option, section, rawval, e.args[0]) from None
         if value and "%(" in value:
             raise InterpolationDepthError(option, section, rawval)
         return value
@@ -1180,9 +1179,8 @@ class RawConfigParser(MutableMapping):
             raise TypeError("section names must be strings")
         if not isinstance(option, str):
             raise TypeError("option keys must be strings")
-        if not self._allow_no_value or value:
-            if not isinstance(value, str):
-                raise TypeError("option values must be strings")
+        if (not self._allow_no_value or value) and not isinstance(value, str):
+            raise TypeError("option values must be strings")
 
     @property
     def converters(self):

@@ -72,8 +72,8 @@ def _sig(st):
             st.st_mtime)
 
 def _do_cmp(f1, f2):
-    bufsize = BUFSIZE
     with open(f1, 'rb') as fp1, open(f2, 'rb') as fp2:
+        bufsize = BUFSIZE
         while True:
             b1 = fp1.read(bufsize)
             b2 = fp2.read(bufsize)

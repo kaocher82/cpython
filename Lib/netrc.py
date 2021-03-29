@@ -70,16 +70,15 @@ class netrc:
                 tt = lexer.get_token()
                 if (tt.startswith('#') or
                     tt in {'', 'machine', 'default', 'macdef'}):
-                    if password:
-                        self.hosts[entryname] = (login, account, password)
-                        lexer.push_token(tt)
-                        break
-                    else:
+                    if not password:
                         raise NetrcParseError(
                             "malformed %s entry %s terminated by %s"
                             % (toplevel, entryname, repr(tt)),
                             file, lexer.lineno)
-                elif tt == 'login' or tt == 'user':
+                    self.hosts[entryname] = (login, account, password)
+                    lexer.push_token(tt)
+                    break
+                elif tt in ['login', 'user']:
                     login = lexer.get_token()
                 elif tt == 'account':
                     account = lexer.get_token()

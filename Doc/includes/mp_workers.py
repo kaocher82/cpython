@@ -51,12 +51,12 @@ def test():
         task_queue.put(task)
 
     # Start worker processes
-    for i in range(NUMBER_OF_PROCESSES):
+    for _ in range(NUMBER_OF_PROCESSES):
         Process(target=worker, args=(task_queue, done_queue)).start()
 
     # Get and print results
     print('Unordered results:')
-    for i in range(len(TASKS1)):
+    for item in TASKS1:
         print('\t', done_queue.get())
 
     # Add more tasks using `put()`
@@ -64,11 +64,11 @@ def test():
         task_queue.put(task)
 
     # Get and print some more results
-    for i in range(len(TASKS2)):
+    for _ in TASKS2:
         print('\t', done_queue.get())
 
     # Tell child processes to stop
-    for i in range(NUMBER_OF_PROCESSES):
+    for _ in range(NUMBER_OF_PROCESSES):
         task_queue.put('STOP')
 
 

@@ -84,14 +84,8 @@ class Cmd:
         sys.stdin and sys.stdout are used.
 
         """
-        if stdin is not None:
-            self.stdin = stdin
-        else:
-            self.stdin = sys.stdin
-        if stdout is not None:
-            self.stdout = stdout
-        else:
-            self.stdout = sys.stdout
+        self.stdin = stdin if stdin is not None else sys.stdin
+        self.stdout = stdout if stdout is not None else sys.stdout
         self.cmdqueue = []
         self.completekey = completekey
 
@@ -130,10 +124,7 @@ class Cmd:
                         self.stdout.write(self.prompt)
                         self.stdout.flush()
                         line = self.stdin.readline()
-                        if not len(line):
-                            line = 'EOF'
-                        else:
-                            line = line.rstrip('\r\n')
+                        line = 'EOF' if not len(line) else line.rstrip('\r\n')
                 line = self.precmd(line)
                 stop = self.onecmd(line)
                 stop = self.postcmd(stop, line)
@@ -185,7 +176,8 @@ class Cmd:
             else:
                 return None, None, line
         i, n = 0, len(line)
-        while i < n and line[i] in self.identchars: i = i+1
+        while i < n and line[i] in self.identchars:
+            i += 1
         cmd, arg = line[:i], line[i:].strip()
         return cmd, arg, line
 
@@ -209,12 +201,11 @@ class Cmd:
             self.lastcmd = ''
         if cmd == '':
             return self.default(line)
-        else:
-            try:
-                func = getattr(self, 'do_' + cmd)
-            except AttributeError:
-                return self.default(line)
-            return func(arg)
+        try:
+            func = getattr(self, 'do_' + cmd)
+        except AttributeError:
+            return self.default(line)
+        return func(arg)
 
     def emptyline(self):
         """Called when an empty line is entered in response to the prompt.
@@ -285,8 +276,8 @@ class Cmd:
 
     def complete_help(self, *args):
         commands = set(self.completenames(*args))
-        topics = set(a[5:] for a in self.get_names()
-                     if a.startswith('help_' + args[0]))
+        topics = {a[5:] for a in self.get_names()
+                         if a.startswith('help_' + args[0])}
         return list(commands | topics)
 
     def do_help(self, arg):
@@ -310,10 +301,7 @@ class Cmd:
             names = self.get_names()
             cmds_doc = []
             cmds_undoc = []
-            help = {}
-            for name in names:
-                if name[:5] == 'help_':
-                    help[name[5:]]=1
+            help = {name[5:]: 1 for name in names if name[:5] == 'help_'}
             names.sort()
             # There can be duplicates if routines overridden
             prevname = ''
@@ -389,10 +377,7 @@ class Cmd:
             texts = []
             for col in range(ncols):
                 i = row + nrows*col
-                if i >= size:
-                    x = ""
-                else:
-                    x = list[i]
+                x = "" if i >= size else list[i]
                 texts.append(x)
             while texts and not texts[-1]:
                 del texts[-1]

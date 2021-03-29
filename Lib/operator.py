@@ -56,7 +56,7 @@ def not_(a):
 
 def truth(a):
     "Return True if a is true, False otherwise."
-    return True if a else False
+    return bool(a)
 
 def is_(a, b):
     "Same as a is b."
@@ -156,11 +156,7 @@ def contains(a, b):
 
 def countOf(a, b):
     "Return the number of times b occurs in a."
-    count = 0
-    for i in a:
-        if i == b:
-            count += 1
-    return count
+    return a.count(b)
 
 def delitem(a, b):
     "Same as del a[b]."
@@ -313,8 +309,7 @@ class methodcaller:
         return getattr(obj, self._name)(*self._args, **self._kwargs)
 
     def __repr__(self):
-        args = [repr(self._name)]
-        args.extend(map(repr, self._args))
+        args = [repr(self._name), *map(repr, self._args)]
         args.extend('%s=%r' % (k, v) for k, v in self._kwargs.items())
         return '%s.%s(%s)' % (self.__class__.__module__,
                               self.__class__.__name__,
@@ -323,9 +318,8 @@ class methodcaller:
     def __reduce__(self):
         if not self._kwargs:
             return self.__class__, (self._name,) + self._args
-        else:
-            from functools import partial
-            return partial(self.__class__, self._name, **self._kwargs), self._args
+        from functools import partial
+        return partial(self.__class__, self._name, **self._kwargs), self._args
 
 
 # In-place Operations *********************************************************#

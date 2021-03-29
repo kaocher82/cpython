@@ -176,10 +176,7 @@ class TimeRE(dict):
         Order of execution is important for dependency reasons.
 
         """
-        if locale_time:
-            self.locale_time = locale_time
-        else:
-            self.locale_time = LocaleTime()
+        self.locale_time = locale_time or LocaleTime()
         base = super()
         base.__init__({
             # The " [1-9]" part of the regex is to make %c from ANSI C work
@@ -285,9 +282,8 @@ def _calc_julian_from_U_or_W(year, week_of_year, day_of_week, week_starts_Mon):
     week_0_length = (7 - first_weekday) % 7
     if week_of_year == 0:
         return 1 + day_of_week - first_weekday
-    else:
-        days_to_week = week_0_length + (7 * (week_of_year - 1))
-        return 1 + days_to_week + day_of_week
+    days_to_week = week_0_length + (7 * (week_of_year - 1))
+    return 1 + days_to_week + day_of_week
 
 
 def _calc_julian_from_V(iso_year, iso_week, iso_weekday):

@@ -89,7 +89,7 @@ def translate(pat):
     i, n = 0, len(pat)
     while i < n:
         c = pat[i]
-        i = i+1
+        i += 1
         if c == '*':
             # compress consecutive `*` into one
             if (not res) or res[-1] is not STAR:
@@ -99,11 +99,11 @@ def translate(pat):
         elif c == '[':
             j = i
             if j < n and pat[j] == '!':
-                j = j+1
+                j += 1
             if j < n and pat[j] == ']':
-                j = j+1
+                j += 1
             while j < n and pat[j] != ']':
-                j = j+1
+                j += 1
             if j >= n:
                 add('\\[')
             else:

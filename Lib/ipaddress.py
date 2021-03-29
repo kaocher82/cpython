@@ -831,7 +831,7 @@ class _BaseNetwork(_IPAddressBase):
             ValueError: If other is not completely contained by self.
 
         """
-        if not self._version == other._version:
+        if self._version != other._version:
             raise TypeError("%s and %s are not of the same version" % (
                              self, other))
 
@@ -1521,9 +1521,10 @@ class IPv4Network(_BaseV4, _BaseNetwork):
             iana-ipv4-special-registry.
 
         """
-        return (not (self.network_address in IPv4Network('100.64.0.0/10') and
-                    self.broadcast_address in IPv4Network('100.64.0.0/10')) and
-                not self.is_private)
+        return (
+            self.network_address not in IPv4Network('100.64.0.0/10')
+            or self.broadcast_address not in IPv4Network('100.64.0.0/10')
+        ) and not self.is_private
 
 
 class _IPv4Constants:

@@ -209,8 +209,8 @@ class InteractiveConsole(InteractiveInterpreter):
             sys.ps2
         except AttributeError:
             sys.ps2 = "... "
-        cprt = 'Type "help", "copyright", "credits" or "license" for more information.'
         if banner is None:
+            cprt = 'Type "help", "copyright", "credits" or "license" for more information.'
             self.write("Python %s on %s\n%s\n(%s)\n" %
                        (sys.version, sys.platform, cprt,
                         self.__class__.__name__))
@@ -219,10 +219,7 @@ class InteractiveConsole(InteractiveInterpreter):
         more = 0
         while 1:
             try:
-                if more:
-                    prompt = sys.ps2
-                else:
-                    prompt = sys.ps1
+                prompt = sys.ps2 if more else sys.ps1
                 try:
                     line = self.raw_input(prompt)
                 except EOFError:

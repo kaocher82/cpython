@@ -358,11 +358,7 @@ class HelpFormatter:
             short_opts = option._short_opts
             long_opts = option._long_opts
 
-        if self.short_first:
-            opts = short_opts + long_opts
-        else:
-            opts = long_opts + short_opts
-
+        opts = short_opts + long_opts if self.short_first else long_opts + short_opts
         return ", ".join(opts)
 
 class IndentedHelpFormatter (HelpFormatter):
@@ -435,11 +431,10 @@ def check_builtin(option, opt, value):
 def check_choice(option, opt, value):
     if value in option.choices:
         return value
-    else:
-        choices = ", ".join(map(repr, option.choices))
-        raise OptionValueError(
-            _("option %s: invalid choice: %r (choose from %s)")
-            % (opt, value, choices))
+    choices = ", ".join(map(repr, option.choices))
+    raise OptionValueError(
+        _("option %s: invalid choice: %r (choose from %s)")
+        % (opt, value, choices))
 
 # Not supplying a default is different from a default of None,
 # so we need an explicit "not supplied" value.
@@ -596,14 +591,14 @@ class Option:
                     "invalid option string %r: "
                     "must be at least two characters long" % opt, self)
             elif len(opt) == 2:
-                if not (opt[0] == "-" and opt[1] != "-"):
+                if opt[0] != "-" or opt[1] == "-":
                     raise OptionError(
                         "invalid short option string %r: "
                         "must be of the form -x, (x any non-dash char)" % opt,
                         self)
                 self._short_opts.append(opt)
             else:
-                if not (opt[0:2] == "--" and opt[2] != "-"):
+                if opt[0:2] != "--" or opt[2] == "-":
                     raise OptionError(
                         "invalid long option string %r: "
                         "must start with --, followed by non-dash" % opt,
@@ -770,7 +765,7 @@ class Option:
             if self.nargs == 1:
                 return self.check_value(opt, value)
             else:
-                return tuple([self.check_value(opt, v) for v in value])
+                return tuple(self.check_value(opt, v) for v in value)
 
     def process(self, opt, value, values, parser):
 
@@ -966,10 +961,12 @@ class OptionContainer:
     # -- Option-adding methods -----------------------------------------
 
     def _check_conflict(self, option):
-        conflict_opts = []
-        for opt in option._short_opts:
-            if opt in self._short_opt:
-                conflict_opts.append((opt, self._short_opt[opt]))
+        conflict_opts = [
+            (opt, self._short_opt[opt])
+            for opt in option._short_opts
+            if opt in self._short_opt
+        ]
+
         for opt in option._long_opts:
             if opt in self._long_opt:
                 conflict_opts.append((opt, self._long_opt[opt]))
@@ -978,9 +975,13 @@ class OptionContainer:
             handler = self.conflict_handler
             if handler == "error":
                 raise OptionConflictError(
-                    "conflicting option string(s): %s"
-                    % ", ".join([co[0] for co in conflict_opts]),
-                    option)
+                    (
+                        "conflicting option string(s): %s"
+                        % ", ".join(co[0] for co in conflict_opts)
+                    ),
+                    option,
+                )
+
             elif handler == "resolve":
                 for (opt, c_option) in conflict_opts:
                     if opt.startswith("--"):
@@ -1055,10 +1056,12 @@ class OptionContainer:
     def format_option_help(self, formatter):
         if not self.option_list:
             return ""
-        result = []
-        for option in self.option_list:
-            if not option.help is SUPPRESS_HELP:
-                result.append(formatter.format_option(option))
+        result = [
+            formatter.format_option(option)
+            for option in self.option_list
+            if option.help is not SUPPRESS_HELP
+        ]
+
         return "".join(result)
 
     def format_description(self, formatter):
@@ -1608,8 +1611,7 @@ class OptionParser (OptionContainer):
         if formatter is None:
             formatter = self.formatter
         formatter.store_option_strings(self)
-        result = []
-        result.append(formatter.format_heading(_("Options")))
+        result = [formatter.format_heading(_("Options"))]
         formatter.indent()
         if self.option_list:
             result.append(OptionContainer.format_option_help(self, formatter))
@@ -1659,19 +1661,18 @@ def _match_abbrev(s, wordmap):
     # Is there an exact match?
     if s in wordmap:
         return s
+    # Isolate all words with s as a prefix.
+    possibilities = [word for word in wordmap.keys()
+                     if word.startswith(s)]
+    # No exact match, so there had better be just one possibility.
+    if len(possibilities) == 1:
+        return possibilities[0]
+    elif not possibilities:
+        raise BadOptionError(s)
     else:
-        # Isolate all words with s as a prefix.
-        possibilities = [word for word in wordmap.keys()
-                         if word.startswith(s)]
-        # No exact match, so there had better be just one possibility.
-        if len(possibilities) == 1:
-            return possibilities[0]
-        elif not possibilities:
-            raise BadOptionError(s)
-        else:
-            # More than one possible completion: ambiguous prefix.
-            possibilities.sort()
-            raise AmbiguousOptionError(s, possibilities)
+        # More than one possible completion: ambiguous prefix.
+        possibilities.sort()
+        raise AmbiguousOptionError(s, possibilities)
 
 
 # Some day, there might be many Option classes.  As of Optik 1.3, the

@@ -169,12 +169,13 @@ class AuditEvent(Directive):
             'args': args
         }
         info = env.all_audit_events.setdefault(name, new_info)
-        if info is not new_info:
-            if not self._do_args_match(info['args'], new_info['args']):
-                self.logger.warn(
-                    "Mismatched arguments for audit-event {}: {!r} != {!r}"
-                    .format(name, info['args'], new_info['args'])
-                )
+        if info is not new_info and not self._do_args_match(
+            info['args'], new_info['args']
+        ):
+            self.logger.warn(
+                "Mismatched arguments for audit-event {}: {!r} != {!r}"
+                .format(name, info['args'], new_info['args'])
+            )
 
         ids = []
         try:

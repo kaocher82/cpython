@@ -630,10 +630,7 @@ class NNTP:
         - resp: server response if successful
         - list: list of (group, last, first, flag) (strings)
         """
-        if group_pattern is not None:
-            command = 'LIST ACTIVE ' + group_pattern
-        else:
-            command = 'LIST'
+        command = 'LIST' if group_pattern is None else 'LIST ACTIVE ' + group_pattern
         resp, lines = self._longcmdstring(command, file)
         return resp, self._grouplist(lines)
 
@@ -764,10 +761,7 @@ class NNTP:
         - resp: server response if successful
         - ArticleInfo: (article number, message id, list of header lines)
         """
-        if message_spec is not None:
-            cmd = 'HEAD {0}'.format(message_spec)
-        else:
-            cmd = 'HEAD'
+        cmd = 'HEAD {0}'.format(message_spec) if message_spec is not None else 'HEAD'
         return self._artcmd(cmd, file)
 
     def body(self, message_spec=None, *, file=None):
@@ -778,10 +772,7 @@ class NNTP:
         - resp: server response if successful
         - ArticleInfo: (article number, message id, list of body lines)
         """
-        if message_spec is not None:
-            cmd = 'BODY {0}'.format(message_spec)
-        else:
-            cmd = 'BODY'
+        cmd = 'BODY {0}'.format(message_spec) if message_spec is not None else 'BODY'
         return self._artcmd(cmd, file)
 
     def article(self, message_spec=None, *, file=None):
@@ -792,10 +783,7 @@ class NNTP:
         - resp: server response if successful
         - ArticleInfo: (article number, message id, list of article lines)
         """
-        if message_spec is not None:
-            cmd = 'ARTICLE {0}'.format(message_spec)
-        else:
-            cmd = 'ARTICLE'
+        cmd = 'ARTICLE' if message_spec is None else 'ARTICLE {0}'.format(message_spec)
         return self._artcmd(cmd, file)
 
     def slave(self):
@@ -958,10 +946,9 @@ class NNTP:
         if resp.startswith('381'):
             if not password:
                 raise NNTPReplyError(resp)
-            else:
-                resp = self._shortcmd('authinfo pass ' + password)
-                if not resp.startswith('281'):
-                    raise NNTPPermanentError(resp)
+            resp = self._shortcmd('authinfo pass ' + password)
+            if not resp.startswith('281'):
+                raise NNTPPermanentError(resp)
         # Capabilities might have changed after login
         self._caps = None
         self.getcapabilities()

@@ -241,10 +241,8 @@ def open(file, mode="r", buffering=-1, encoding=None, errors=None,
             buffer = BufferedRandom(raw, buffering)
         elif creating or writing or appending:
             buffer = BufferedWriter(raw, buffering)
-        elif reading:
-            buffer = BufferedReader(raw, buffering)
         else:
-            raise ValueError("unknown mode: %r" % mode)
+            buffer = BufferedReader(raw, buffering)
         result = buffer
         if binary:
             return result
@@ -744,10 +742,7 @@ class BufferedIOBase(IOBase):
             b = memoryview(b)
         b = b.cast('B')
 
-        if read1:
-            data = self.read1(len(b))
-        else:
-            data = self.read(len(b))
+        data = self.read1(len(b)) if read1 else self.read(len(b))
         n = len(data)
 
         b[:n] = data
@@ -1567,8 +1562,7 @@ class FileIO(RawIOBase):
                         raise OSError('Negative file descriptor')
                 owned_fd = fd
                 if not noinherit_flag:
-                    os.set_inheritable(fd, False)
-
+                    os.set_inheritable(owned_fd, False)
             self._closefd = closefd
             fdfstat = os.fstat(fd)
             try:
@@ -2009,14 +2003,14 @@ class TextIOWrapper(TextIOBase):
                 encoding = os.device_encoding(buffer.fileno())
             except (AttributeError, UnsupportedOperation):
                 pass
-            if encoding is None:
-                try:
-                    import locale
-                except ImportError:
-                    # Importing locale may fail if Python is being built
-                    encoding = "ascii"
-                else:
-                    encoding = locale.getpreferredencoding(False)
+        if encoding is None:
+            try:
+                import locale
+            except ImportError:
+                # Importing locale may fail if Python is being built
+                encoding = "ascii"
+            else:
+                encoding = locale.getpreferredencoding(False)
 
         if not isinstance(encoding, str):
             raise ValueError("invalid encoding: %r" % encoding)
@@ -2137,10 +2131,7 @@ class TextIOWrapper(TextIOBase):
                 "after the first read")
 
         if errors is None:
-            if encoding is None:
-                errors = self._errors
-            else:
-                errors = 'strict'
+            errors = self._errors if encoding is None else 'strict'
         elif not isinstance(errors, str):
             raise TypeError("invalid errors: %r" % errors)
 
@@ -2373,7 +2364,7 @@ class TextIOWrapper(TextIOBase):
                 else:
                     # We're too far ahead, skip back a bit
                     skip_bytes -= skip_back
-                    skip_back = skip_back * 2
+                    skip_back *= 2
             else:
                 skip_bytes = 0
                 decoder.setstate((b'', dec_flags))
@@ -2524,7 +2515,6 @@ class TextIOWrapper(TextIOBase):
                       decoder.decode(self.buffer.read(), final=True))
             self._set_decoded_chars('')
             self._snapshot = None
-            return result
         else:
             # Keep reading chunks until we have size characters to return.
             eof = False
@@ -2532,7 +2522,8 @@ class TextIOWrapper(TextIOBase):
             while len(result) < size and not eof:
                 eof = not self._read_chunk()
                 result += self._get_decoded_chars(size - len(result))
-            return result
+
+        return result
 
     def __next__(self):
         self._telling = False

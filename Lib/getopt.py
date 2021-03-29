@@ -81,10 +81,7 @@ def getopt(args, shortopts, longopts = []):
     """
 
     opts = []
-    if type(longopts) == type(""):
-        longopts = [longopts]
-    else:
-        longopts = list(longopts)
+    longopts = [longopts] if type(longopts) == type("") else list(longopts)
     while args and args[0].startswith('-') and args[0] != '-':
         if args[0] == '--':
             args = args[1:]
@@ -113,11 +110,7 @@ def gnu_getopt(args, shortopts, longopts = []):
 
     opts = []
     prog_args = []
-    if isinstance(longopts, str):
-        longopts = [longopts]
-    else:
-        longopts = list(longopts)
-
+    longopts = [longopts] if isinstance(longopts, str) else list(longopts)
     # Allow options after non-option arguments?
     if shortopts.startswith('+'):
         shortopts = shortopts[1:]

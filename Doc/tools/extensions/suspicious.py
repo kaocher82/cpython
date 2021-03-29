@@ -169,7 +169,6 @@ class CheckSuspiciousMarkupBuilder(Builder):
             f = open(self.log_file_name, 'a')
             writer = csv.writer(f, dialect)
             writer.writerow([self.docname, lineno, issue, text.strip()])
-            f.close()
         else:
             f = open(self.log_file_name, 'ab')
             writer = csv.writer(f, dialect)
@@ -177,7 +176,8 @@ class CheckSuspiciousMarkupBuilder(Builder):
                              lineno,
                              issue.encode('utf-8'),
                              text.strip().encode('utf-8')])
-            f.close()
+
+        f.close()
 
     def load_rules(self, filename):
         """Load database of previously ignored issues.
@@ -188,10 +188,7 @@ class CheckSuspiciousMarkupBuilder(Builder):
         self.logger.info("loading ignore rules... ", nonl=1)
         self.rules = rules = []
         try:
-            if py3:
-                f = open(filename, 'r')
-            else:
-                f = open(filename, 'rb')
+            f = open(filename, 'r') if py3 else open(filename, 'rb')
         except IOError:
             return
         for i, row in enumerate(csv.reader(f)):
@@ -199,10 +196,7 @@ class CheckSuspiciousMarkupBuilder(Builder):
                 raise ValueError(
                     "wrong format in %s, line %d: %s" % (filename, i+1, row))
             docname, lineno, issue, text = row
-            if lineno:
-                lineno = int(lineno)
-            else:
-                lineno = None
+            lineno = int(lineno) if lineno else None
             if not py3:
                 docname = docname.decode('utf-8')
                 issue = issue.decode('utf-8')

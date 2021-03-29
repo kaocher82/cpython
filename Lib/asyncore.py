@@ -218,11 +218,7 @@ class dispatcher:
     ignore_log_types = frozenset({'warning'})
 
     def __init__(self, sock=None, map=None):
-        if map is None:
-            self._map = socket_map
-        else:
-            self._map = map
-
+        self._map = socket_map if map is None else map
         self._fileno = None
 
         if sock:
@@ -333,11 +329,11 @@ class dispatcher:
         or err == EINVAL and os.name == 'nt':
             self.addr = address
             return
-        if err in (0, EISCONN):
-            self.addr = address
-            self.handle_connect_event()
-        else:
+        if err not in (0, EISCONN):
             raise OSError(err, errorcode[err])
+
+        self.addr = address
+        self.handle_connect_event()
 
     def accept(self):
         # XXX can return either an address pair or None
@@ -355,8 +351,7 @@ class dispatcher:
 
     def send(self, data):
         try:
-            result = self.socket.send(data)
-            return result
+            return self.socket.send(data)
         except OSError as why:
             if why.args[0] == EWOULDBLOCK:
                 return 0
@@ -369,20 +364,19 @@ class dispatcher:
     def recv(self, buffer_size):
         try:
             data = self.socket.recv(buffer_size)
-            if not data:
-                # a closed connection is indicated by signaling
-                # a read condition, and having recv() return 0.
-                self.handle_close()
-                return b''
-            else:
+            if data:
                 return data
+            # a closed connection is indicated by signaling
+            # a read condition, and having recv() return 0.
+            self.handle_close()
+            return b''
         except OSError as why:
             # winsock sometimes raises ENOTCONN
-            if why.args[0] in _DISCONNECTED:
-                self.handle_close()
-                return b''
-            else:
+            if why.args[0] not in _DISCONNECTED:
                 raise
+
+            self.handle_close()
+            return b''
 
     def close(self):
         self.connected = False
@@ -433,9 +427,8 @@ class dispatcher:
             # We will pretend it didn't happen.
             return
 
-        if not self.connected:
-            if self.connecting:
-                self.handle_connect_event()
+        if not self.connected and self.connecting:
+            self.handle_connect_event()
         self.handle_write()
 
     def handle_expt_event(self):
@@ -547,7 +540,7 @@ def compact_traceback():
     del tb
 
     file, function, line = tbinfo[-1]
-    info = ' '.join(['[%s|%s|%s]' % x for x in tbinfo])
+    info = ' '.join('[%s|%s|%s]' % x for x in tbinfo)
     return (file, function, line), t, v, info
 
 def close_all(map=None, ignore_all=False):

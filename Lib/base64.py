@@ -332,9 +332,8 @@ def a85encode(b, *, foldspaces=False, wrapcol=0, pad=False, adobe=False):
         wrapcol = max(2 if adobe else 1, wrapcol)
         chunks = [result[i: i + wrapcol]
                   for i in range(0, len(result), wrapcol)]
-        if adobe:
-            if len(chunks[-1]) + 2 > wrapcol:
-                chunks.append(b'')
+        if adobe and len(chunks[-1]) + 2 > wrapcol:
+            chunks.append(b'')
         result = b'\n'.join(chunks)
     if adobe:
         result += _A85END
@@ -554,9 +553,10 @@ def main():
         sys.exit(2)
     func = encode
     for o, a in opts:
-        if o == '-e': func = encode
-        if o == '-d': func = decode
-        if o == '-u': func = decode
+        if o in ['-d', '-u']:
+            func = decode
+        elif o == '-e':
+            func = encode
         if o == '-t': test(); return
     if args and args[0] != '-':
         with open(args[0], 'rb') as f:

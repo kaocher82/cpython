@@ -369,7 +369,7 @@ class PyBuildExt(build_ext):
         extensions = [ext for ext in self.extensions
                       if ext.name not in DISABLED_MODULE_LIST]
         # move ctypes to the end, it depends on other modules
-        ext_map = dict((ext.name, i) for i, ext in enumerate(extensions))
+        ext_map = {ext.name: i for i, ext in enumerate(extensions)}
         if "_ctypes" in ext_map:
             ctypes = extensions.pop(ext_map["_ctypes"])
             extensions.append(ctypes)
@@ -542,10 +542,9 @@ class PyBuildExt(build_ext):
 
     def build_extension(self, ext):
 
-        if ext.name == '_ctypes':
-            if not self.configure_ctypes(ext):
-                self.failed.append(ext.name)
-                return
+        if ext.name == '_ctypes' and not self.configure_ctypes(ext):
+            self.failed.append(ext.name)
+            return
 
         try:
             build_ext.build_extension(self, ext)
@@ -1167,9 +1166,7 @@ class PyBuildExt(build_ext):
             Args:
               db_ver: A tuple of the version to verify.
             """
-            if not (min_db_ver <= db_ver <= max_db_ver):
-                return False
-            return True
+            return min_db_ver <= db_ver <= max_db_ver
 
         def gen_db_minor_ver_nums(major):
             if major == 4:
@@ -1602,18 +1599,14 @@ class PyBuildExt(build_ext):
                     if line.startswith('#define ZLIB_VERSION'):
                         version = line.split()[2]
                         break
-            if version >= version_req:
-                if (self.compiler.find_library_file(self.lib_dirs, 'z')):
-                    if MACOS:
-                        zlib_extra_link_args = ('-Wl,-search_paths_first',)
-                    else:
-                        zlib_extra_link_args = ()
-                    self.add(Extension('zlib', ['zlibmodule.c'],
-                                       libraries=['z'],
-                                       extra_link_args=zlib_extra_link_args))
-                    have_zlib = True
-                else:
-                    self.missing.append('zlib')
+            if version >= version_req and (
+                self.compiler.find_library_file(self.lib_dirs, 'z')
+            ):
+                zlib_extra_link_args = ('-Wl,-search_paths_first', ) if MACOS else ()
+                self.add(Extension('zlib', ['zlibmodule.c'],
+                                   libraries=['z'],
+                                   extra_link_args=zlib_extra_link_args))
+                have_zlib = True
             else:
                 self.missing.append('zlib')
         else:
@@ -1636,10 +1629,7 @@ class PyBuildExt(build_ext):
 
         # Gustavo Niemeyer's bz2 module.
         if (self.compiler.find_library_file(self.lib_dirs, 'bz2')):
-            if MACOS:
-                bz2_extra_link_args = ('-Wl,-search_paths_first',)
-            else:
-                bz2_extra_link_args = ()
+            bz2_extra_link_args = ('-Wl,-search_paths_first', ) if MACOS else ()
             self.add(Extension('_bz2', ['_bz2module.c'],
                                libraries=['bz2'],
                                extra_link_args=bz2_extra_link_args))
@@ -1654,6 +1644,7 @@ class PyBuildExt(build_ext):
             self.missing.append('_lzma')
 
     def detect_expat_elementtree(self):
+        extra_compile_args = []
         # Interface to the Expat XML parser
         #
         # Expat was written by James Clark and is now maintained by a group of
@@ -1668,7 +1659,6 @@ class PyBuildExt(build_ext):
         if '--with-system-expat' in sysconfig.get_config_var("CONFIG_ARGS"):
             expat_inc = []
             define_macros = []
-            extra_compile_args = []
             expat_lib = ['expat']
             expat_sources = []
             expat_depends = []
@@ -1680,7 +1670,6 @@ class PyBuildExt(build_ext):
                 # call XML_SetHashSalt(), expat entropy sources are not needed
                 ('XML_POOR_ENTROPY', '1'),
             ]
-            extra_compile_args = []
             expat_lib = []
             expat_sources = ['expat/xmlparse.c',
                              'expat/xmlrole.c',
@@ -2273,8 +2262,11 @@ class PyBuildExt(build_ext):
                 define_macros = config['ansi64']
         elif sizeof_size_t == 4:
             ppro = sysconfig.get_config_var('HAVE_GCC_ASM_FOR_X87')
-            if ppro and ('gcc' in cc or 'clang' in cc) and \
-               not 'sunos' in HOST_PLATFORM:
+            if (
+                ppro
+                and (('gcc' in cc or 'clang' in cc))
+                and 'sunos' not in HOST_PLATFORM
+            ):
                 # solaris: problems with register allocation.
                 # icc >= 11.0 works as well.
                 define_macros = config['ppro']

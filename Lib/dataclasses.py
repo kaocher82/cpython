@@ -418,7 +418,18 @@ def _field_init(f, frozen, globals, self_name):
     # initialize this field.
 
     default_name = f'_dflt_{f.name}'
-    if f.default_factory is not MISSING:
+    if f.default_factory is MISSING:
+        # No default factory.
+        if not f.init:
+            # This field does not need initialization.  Signify that
+            # to the caller by returning None.
+            return None
+
+        if f.default is not MISSING:
+            globals[default_name] = f.default
+        # There's no default, just do an assignment.
+        value = f.name
+    else:
         if f.init:
             # This field has a default factory.  If a parameter is
             # given, use it.  If not, call the factory.
@@ -443,20 +454,6 @@ def _field_init(f, frozen, globals, self_name):
 
             globals[default_name] = f.default_factory
             value = f'{default_name}()'
-    else:
-        # No default factory.
-        if f.init:
-            if f.default is MISSING:
-                # There's no default, just do an assignment.
-                value = f.name
-            elif f.default is not MISSING:
-                globals[default_name] = f.default
-                value = f.name
-        else:
-            # This field does not need initialization.  Signify that
-            # to the caller by returning None.
-            return None
-
     # Only test this now, so that we can create variables for the
     # default.  However, return None to signify that we're not going
     # to actually do the assignment statement for InitVars.
@@ -480,7 +477,7 @@ def _init_param(f):
         # There's a default, this will be the name that's used to look
         # it up.
         default = f'=_dflt_{f.name}'
-    elif f.default_factory is not MISSING:
+    else:
         # There's a factory function.  Set a marker.
         default = '=_HAS_DEFAULT_FACTORY'
     return f'{f.name}:_type_{f.name}{default}'
@@ -498,7 +495,7 @@ def _init_fn(fields, frozen, has_post_init, self_name, globals):
     for f in fields:
         # Only consider fields in the __init__ call.
         if f.init:
-            if not (f.default is MISSING and f.default_factory is MISSING):
+            if f.default is not MISSING or f.default_factory is not MISSING:
                 seen_default = True
             elif seen_default:
                 raise TypeError(f'non-default argument {f.name!r} '
@@ -537,13 +534,23 @@ def _init_fn(fields, frozen, has_post_init, self_name, globals):
 
 
 def _repr_fn(fields, globals):
-    fn = _create_fn('__repr__',
-                    ('self',),
-                    ['return self.__class__.__qualname__ + f"(' +
-                     ', '.join([f"{f.name}={{self.{f.name}!r}}"
-                                for f in fields]) +
-                     ')"'],
-                     globals=globals)
+    fn = _create_fn(
+        '__repr__',
+        ('self',),
+        [
+            (
+                (
+                    'return self.__class__.__qualname__ + f"('
+                    + ', '.join(
+                        f"{f.name}={{self.{f.name}!r}}" for f in fields
+                    )
+                )
+                + ')"'
+            )
+        ],
+        globals=globals,
+    )
+
     return _recursive_repr(fn)
 
 
@@ -883,7 +890,7 @@ def _process_class(cls, init, repr, eq, order, unsafe_hash, frozen):
 
     # Do we have any Field members that don't also have annotations?
     for name, value in cls.__dict__.items():
-        if isinstance(value, Field) and not name in cls_annotations:
+        if isinstance(value, Field) and name not in cls_annotations:
             raise TypeError(f'{name!r} is a field but has no type annotation')
 
     # Check rules that apply if we are derived from any dataclasses.
@@ -908,8 +915,10 @@ def _process_class(cls, init, repr, eq, order, unsafe_hash, frozen):
     # that such a __hash__ == None was not auto-generated, but it
     # close enough.
     class_hash = cls.__dict__.get('__hash__', MISSING)
-    has_explicit_hash = not (class_hash is MISSING or
-                             (class_hash is None and '__eq__' in cls.__dict__))
+    has_explicit_hash = class_hash is not MISSING and (
+        class_hash is not None or '__eq__' not in cls.__dict__
+    )
+
 
     # If we're generating ordering methods, we must be generating the
     # eq methods.

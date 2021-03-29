@@ -153,15 +153,17 @@ def code_info(x):
     return _format_code_info(_get_code_object(x))
 
 def _format_code_info(co):
-    lines = []
-    lines.append("Name:              %s" % co.co_name)
-    lines.append("Filename:          %s" % co.co_filename)
-    lines.append("Argument count:    %s" % co.co_argcount)
-    lines.append("Positional-only arguments: %s" % co.co_posonlyargcount)
-    lines.append("Kw-only arguments: %s" % co.co_kwonlyargcount)
-    lines.append("Number of locals:  %s" % co.co_nlocals)
-    lines.append("Stack size:        %s" % co.co_stacksize)
-    lines.append("Flags:             %s" % pretty_flags(co.co_flags))
+    lines = [
+        "Name:              %s" % co.co_name,
+        "Filename:          %s" % co.co_filename,
+        "Argument count:    %s" % co.co_argcount,
+        "Positional-only arguments: %s" % co.co_posonlyargcount,
+        "Kw-only arguments: %s" % co.co_kwonlyargcount,
+        "Number of locals:  %s" % co.co_nlocals,
+        "Stack size:        %s" % co.co_stacksize,
+        "Flags:             %s" % pretty_flags(co.co_flags),
+    ]
+
     if co.co_consts:
         lines.append("Constants:")
         for i_c in enumerate(co.co_consts):
@@ -272,10 +274,7 @@ def get_instructions(x, *, first_line=None):
     co = _get_code_object(x)
     cell_names = co.co_cellvars + co.co_freevars
     linestarts = dict(findlinestarts(co))
-    if first_line is not None:
-        line_offset = first_line - co.co_firstlineno
-    else:
-        line_offset = 0
+    line_offset = first_line - co.co_firstlineno if first_line is not None else 0
     return _get_instructions_bytes(co.co_code, co.co_varnames, co.co_names,
                                    co.co_consts, cell_names, linestarts,
                                    line_offset)
@@ -387,17 +386,11 @@ def _disassemble_bytes(code, lasti=-1, varnames=None, names=None,
     show_lineno = linestarts is not None
     if show_lineno:
         maxlineno = max(linestarts.values()) + line_offset
-        if maxlineno >= 1000:
-            lineno_width = len(str(maxlineno))
-        else:
-            lineno_width = 3
+        lineno_width = len(str(maxlineno)) if maxlineno >= 1000 else 3
     else:
         lineno_width = 0
     maxoffset = len(code) - 2
-    if maxoffset >= 10000:
-        offset_width = len(str(maxoffset))
-    else:
-        offset_width = 4
+    offset_width = len(str(maxoffset)) if maxoffset >= 10000 else 4
     for instr in _get_instructions_bytes(code, varnames, names,
                                          constants, cells, linestarts,
                                          line_offset=line_offset):
@@ -522,10 +515,7 @@ class Bytecode:
     def dis(self):
         """Return a formatted view of the bytecode operations."""
         co = self.codeobj
-        if self.current_offset is not None:
-            offset = self.current_offset
-        else:
-            offset = -1
+        offset = self.current_offset if self.current_offset is not None else -1
         with io.StringIO() as output:
             _disassemble_bytes(co.co_code, varnames=co.co_varnames,
                                names=co.co_names, constants=co.co_consts,

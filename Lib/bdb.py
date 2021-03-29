@@ -192,10 +192,7 @@ class Bdb:
         "Return True if module_name matches any skip pattern."
         if module_name is None:  # some modules do not have names
             return False
-        for pattern in self.skip:
-            if fnmatch.fnmatch(module_name, pattern):
-                return True
-        return False
+        return any(fnmatch.fnmatch(module_name, pattern) for pattern in self.skip)
 
     def stop_here(self, frame):
         "Return True if frame is below the starting frame in the stack."
@@ -208,9 +205,7 @@ class Bdb:
             if self.stoplineno == -1:
                 return False
             return frame.f_lineno >= self.stoplineno
-        if not self.stopframe:
-            return True
-        return False
+        return not self.stopframe
 
     def break_here(self, frame):
         """Return True if there is an effective breakpoint for this line.
@@ -226,8 +221,8 @@ class Bdb:
             # The line itself has no breakpoint, but maybe the line is the
             # first line of a function with breakpoint set by function name.
             lineno = frame.f_code.co_firstlineno
-            if lineno not in self.breaks[filename]:
-                return False
+        if lineno not in self.breaks[filename]:
+            return False
 
         # flag says ok to delete temp. bp
         (bp, flag) = effective(filename, lineno, frame)
@@ -544,10 +539,7 @@ class Bdb:
         frame, lineno = frame_lineno
         filename = self.canonic(frame.f_code.co_filename)
         s = '%s(%r)' % (filename, lineno)
-        if frame.f_code.co_name:
-            s += frame.f_code.co_name
-        else:
-            s += "<lambda>"
+        s += frame.f_code.co_name or "<lambda>"
         s += '()'
         if '__return__' in frame.f_locals:
             rv = frame.f_locals['__return__']
@@ -721,14 +713,8 @@ class Breakpoint:
         ignore, and number of times hit.
 
         """
-        if self.temporary:
-            disp = 'del  '
-        else:
-            disp = 'keep '
-        if self.enabled:
-            disp = disp + 'yes  '
-        else:
-            disp = disp + 'no   '
+        disp = 'del  ' if self.temporary else 'keep '
+        disp += 'yes  ' if self.enabled else 'no   '
         ret = '%-4dbreakpoint   %s at %s:%d' % (self.number, disp,
                                                 self.file, self.line)
         if self.cond:
@@ -736,10 +722,7 @@ class Breakpoint:
         if self.ignore:
             ret += '\n\tignore next %d hits' % (self.ignore,)
         if self.hits:
-            if self.hits > 1:
-                ss = 's'
-            else:
-                ss = ''
+            ss = 's' if self.hits > 1 else ''
             ret += '\n\tbreakpoint already hit %d time%s' % (self.hits, ss)
         return ret
 
@@ -802,12 +785,11 @@ def effective(file, line, frame):
         b.hits += 1
         if not b.cond:
             # If unconditional, and ignoring go on to next, else break
-            if b.ignore > 0:
-                b.ignore -= 1
-                continue
-            else:
+            if b.ignore <= 0:
                 # breakpoint and marker that it's ok to delete if temporary
                 return (b, True)
+            b.ignore -= 1
+            continue
         else:
             # Conditional bp.
             # Ignore count applies only to those bpt hits where the

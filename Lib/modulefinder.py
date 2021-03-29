@@ -135,7 +135,7 @@ class ModuleFinder:
 
     def msg(self, level, str, *args):
         if level <= self.debug:
-            for i in range(self.indent):
+            for _ in range(self.indent):
                 print("   ", end=' ')
             print(str, end=' ')
             for arg in args:
@@ -222,10 +222,7 @@ class ModuleFinder:
         else:
             head = name
             tail = ""
-        if parent:
-            qname = "%s.%s" % (parent.__name__, head)
-        else:
-            qname = head
+        qname = "%s.%s" % (parent.__name__, head) if parent else head
         q = self.import_module(head, qname, parent)
         if q:
             self.msgout(4, "find_head_package ->", (q, tail))
@@ -472,7 +469,7 @@ class ModuleFinder:
         m.__path__ = [pathname]
 
         # As per comment at top of file, simulate runtime __path__ additions.
-        m.__path__ = m.__path__ + packagePathMap.get(fqname, [])
+        m.__path__ += packagePathMap.get(fqname, [])
 
         fp, buf, stuff = self.find_module("__init__", m.__path__)
         try:
@@ -635,22 +632,18 @@ def test():
     exclude = []
     for o, a in opts:
         if o == '-d':
-            debug = debug + 1
-        if o == '-m':
+            debug += 1
+        elif o == '-m':
             domods = 1
         if o == '-p':
-            addpath = addpath + a.split(os.pathsep)
+            addpath += a.split(os.pathsep)
         if o == '-q':
             debug = 0
-        if o == '-x':
+        elif o == '-x':
             exclude.append(a)
 
     # Provide default arguments
-    if not args:
-        script = "hello.py"
-    else:
-        script = args[0]
-
+    script = "hello.py" if not args else args[0]
     # Set the path based on sys.path and the script directory
     path = sys.path[:]
     path[0] = os.path.dirname(script)
