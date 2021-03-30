@@ -47,8 +47,8 @@ class ExecModuleTests(abc.LoaderTests):
         self.assertEqual(output, 'Hello world!\n')
 
     def test_lacking_parent(self):
-        name = '__phello__.spam'
         with util.uncache('__phello__'):
+            name = '__phello__.spam'
             module, output = self.exec_module(name)
             check = {'__name__': name}
             for attr, value in check.items():

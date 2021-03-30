@@ -75,13 +75,10 @@ def is_simple(sum):
     A sum is simple if its types have no fields, e.g.
     unaryop = Invert | Not | UAdd | USub
     """
-    for t in sum.types:
-        if t.fields:
-            return False
-    return True
+    return not any(t.fields for t in sum.types)
 
 def asdl_of(name, obj):
-    if isinstance(obj, asdl.Product) or isinstance(obj, asdl.Constructor):
+    if isinstance(obj, (asdl.Product, asdl.Constructor)):
         fields = ", ".join(map(str, obj.fields))
         if fields:
             fields = "({})".format(fields)
@@ -117,10 +114,7 @@ class EmitVisitor(asdl.VisitorBase):
 
     def emit(self, s, depth, reflow=True):
         # XXX reflow long lines?
-        if reflow:
-            lines = reflow_lines(s, depth)
-        else:
-            lines = [s]
+        lines = reflow_lines(s, depth) if reflow else [s]
         for line in lines:
             if line:
                 line = (" " * TABSIZE * depth) + line
@@ -299,10 +293,7 @@ class PrototypeVisitor(EmitVisitor):
                 name = f.name
             # XXX should extend get_c_type() to handle this
             if f.seq:
-                if f.type == 'cmpop':
-                    ctype = "asdl_int_seq *"
-                else:
-                    ctype = f"asdl_{f.type}_seq *"
+                ctype = "asdl_int_seq *" if f.type == 'cmpop' else f"asdl_{f.type}_seq *"
             else:
                 ctype = get_c_type(f.type)
             args.append((ctype, name, f.opt or f.seq))
@@ -317,8 +308,7 @@ class PrototypeVisitor(EmitVisitor):
     def emit_function(self, name, ctype, args, attrs, union=True):
         args = args + attrs
         if args:
-            argstr = ", ".join(["%s %s" % (atype, aname)
-                                for atype, aname, opt in args])
+            argstr = ", ".join("%s %s" % (atype, aname) for atype, aname, opt in args)
             argstr += ", PyArena *arena"
         else:
             argstr = "PyArena *arena"
@@ -445,9 +435,9 @@ class Obj2ModVisitor(PickleVisitor):
 
     def simpleSum(self, sum, name):
         self.funcHeader(name)
+        line = ("isinstance = PyObject_IsInstance(obj, "
+                "state->%s_type);")
         for t in sum.types:
-            line = ("isinstance = PyObject_IsInstance(obj, "
-                    "state->%s_type);")
             self.emit(line % (t.name,), 1)
             self.emit("if (isinstance == -1) {", 1)
             self.emit("return 1;", 2)
@@ -1048,10 +1038,7 @@ static int add_ast_fields(struct ast_state *state)
         '''))
 
     def visitProduct(self, prod, name):
-        if prod.fields:
-            fields = name+"_fields"
-        else:
-            fields = "NULL"
+        fields = name+"_fields" if prod.fields else "NULL"
         self.emit('state->%s_type = make_type(state, "%s", state->AST_type, %s, %d,' %
                         (name, name, fields, len(prod.fields)), 1)
         self.emit('%s);' % reflow_c_string(asdl_of(name, prod), 2), 2, reflow=False)
@@ -1083,10 +1070,7 @@ static int add_ast_fields(struct ast_state *state)
             self.visitConstructor(t, name, simple)
 
     def visitConstructor(self, cons, name, simple):
-        if cons.fields:
-            fields = cons.name+"_fields"
-        else:
-            fields = "NULL"
+        fields = cons.name+"_fields" if cons.fields else "NULL"
         self.emit('state->%s_type = make_type(state, "%s", state->%s_type, %s, %d,' %
                             (cons.name, cons.name, name, fields, len(cons.fields)), 1)
         self.emit('%s);' % reflow_c_string(asdl_of(cons.name, cons), 2), 2, reflow=False)

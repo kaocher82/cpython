@@ -97,7 +97,7 @@ def text_accumulator():
 
 
 def warn_or_fail(fail=False, *args, filename=None, line_number=None):
-    joined = " ".join([str(a) for a in args])
+    joined = " ".join(str(a) for a in args)
     add, output = text_accumulator()
     if fail:
         add("Error")
@@ -564,11 +564,7 @@ def wrap_declarations(text, length=78):
             continue
         parameters = [x.strip() + ", " for x in parameters.split(',')]
         prefix += "("
-        if len(prefix) < length:
-            spaces = " " * len(prefix)
-        else:
-            spaces = " " * 4
-
+        spaces = " " * len(prefix) if len(prefix) < length else " " * 4
         while parameters:
             line = prefix
             first = True
@@ -1184,10 +1180,11 @@ class CLanguage(Language):
                 continue
 
             group_ids = {p.group for p in subset}  # eliminate duplicates
-            d = {}
-            d['count'] = count
-            d['name'] = f.name
-            d['format_units'] = "".join(p.converter.format_unit for p in subset)
+            d = {
+                'count': count,
+                'name': f.name,
+                'format_units': "".join(p.converter.format_unit for p in subset),
+            }
 
             parse_arguments = []
             for p in subset:
@@ -1282,11 +1279,7 @@ class CLanguage(Language):
         full_name = f.full_name
         template_dict['full_name'] = full_name
 
-        if new_or_init:
-            name = f.cls.name
-        else:
-            name = f.name
-
+        name = f.cls.name if new_or_init else f.name
         template_dict['name'] = name
 
         if f.c_basename:
@@ -1317,10 +1310,7 @@ class CLanguage(Language):
         template_dict['keywords'] = ' '.join('"' + k + '",' for k in data.keywords)
         template_dict['format_units'] = ''.join(data.format_units)
         template_dict['parse_arguments'] = ', '.join(data.parse_arguments)
-        if data.parse_arguments:
-            template_dict['parse_arguments_comma'] = ',';
-        else:
-            template_dict['parse_arguments_comma'] = '';
+        template_dict['parse_arguments_comma'] = ',' if data.parse_arguments else ''
         template_dict['impl_parameters'] = ", ".join(data.impl_parameters)
         template_dict['impl_arguments'] = ", ".join(data.impl_arguments)
         template_dict['return_conversion'] = format_escape("".join(data.return_conversion).rstrip())
@@ -1732,10 +1722,7 @@ class Destination:
         self.buffers = BufferSeries()
 
     def __repr__(self):
-        if self.type == 'file':
-            file_repr = " " + repr(self.filename)
-        else:
-            file_repr = ''
+        file_repr = " " + repr(self.filename) if self.type == 'file' else ''
         return "".join(("<Destination ", self.name, " ", self.type, file_repr, ">"))
 
     def clear(self):
@@ -1898,10 +1885,7 @@ impl_definition block
                 self.presets[value] = preset = collections.OrderedDict()
                 continue
 
-            if len(options):
-                index = int(options[0])
-            else:
-                index = 0
+            index = int(options[0]) if len(options) else 0
             buffer = self.get_destination_buffer(value, index)
 
             if name == 'everything':
@@ -2370,10 +2354,7 @@ def add_legacy_c_converter(format_unit, **kwargs):
     Adds a legacy converter.
     """
     def closure(f):
-        if not kwargs:
-            added_f = f
-        else:
-            added_f = functools.partial(f, **kwargs)
+        added_f = f if not kwargs else functools.partial(f, **kwargs)
         if format_unit:
             legacy_converters[format_unit] = added_f
         return f
@@ -2707,7 +2688,7 @@ class CConverter(metaclass=CConverterAutoRegister):
                 """.format(argname=argname, paramname=self.name,
                            subclass_of=self.subclass_of, cast=cast,
                            displayname=displayname)
-        if self.format_unit == 'O':
+        elif self.format_unit == 'O':
             cast = '(%s)' % self.type if self.type != 'PyObject *' else ''
             return """
                 {paramname} = {cast}{argname};
@@ -3411,8 +3392,8 @@ class Py_UNICODE_converter(CConverter):
     default_type = (str, Null, NoneType)
 
     def converter_init(self, *, accept={str}, zeroes=False):
-        format_unit = 'Z' if accept=={str, NoneType} else 'u'
         if zeroes:
+            format_unit = 'Z' if accept=={str, NoneType} else 'u'
             format_unit += '#'
             self.length = True
             self.format_unit = format_unit
@@ -4096,10 +4077,7 @@ class DSLParser:
 
         # Ignore empty lines too
         # (but not in docstring sections!)
-        if not line.strip():
-            return True
-
-        return False
+        return not line.strip()
 
     @staticmethod
     def calculate_indent(line):
@@ -4180,7 +4158,10 @@ class DSLParser:
                 function_name = fields.pop()
                 module, cls = self.clinic._module_and_class(fields)
 
-                if not (existing_function.kind == self.kind and existing_function.coexist == self.coexist):
+                if (
+                    existing_function.kind != self.kind
+                    or existing_function.coexist != self.coexist
+                ):
                     fail("'kind' of function and cloned function don't match!  (@classmethod/@staticmethod/@coexist)")
                 self.function = existing_function.copy(name=function_name, full_name=full_name, module=module, cls=cls, c_basename=c_basename, docstring='')
 
@@ -4643,7 +4624,9 @@ class DSLParser:
         elif symbol == ']':
             if not self.group:
                 fail("Function " + self.function.name + " has a ] without a matching [.")
-            if not any(p.group == self.group for p in self.function.parameters.values()):
+            if all(
+                p.group != self.group for p in self.function.parameters.values()
+            ):
                 fail("Function " + self.function.name + " has an empty group.\nAll groups must contain at least one parameter.")
             self.group -= 1
             if self.parameter_state in (self.ps_left_square_before, self.ps_group_before):
@@ -4715,10 +4698,7 @@ class DSLParser:
         new_docstring = self.function.docstring
         if new_docstring:
             new_docstring += "\n"
-        if stripped:
-            line = self.indent.dedent(line).rstrip()
-        else:
-            line = ''
+        line = self.indent.dedent(line).rstrip() if stripped else ''
         new_docstring += line
         self.function.docstring = new_docstring
 

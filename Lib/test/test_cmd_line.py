@@ -77,8 +77,7 @@ class CmdLineTest(unittest.TestCase):
             args = (sys.executable, '-E') + args
             args += ('-c', 'import sys; print(sys._xoptions)')
             out = subprocess.check_output(args)
-            opts = eval(out.splitlines()[0])
-            return opts
+            return eval(out.splitlines()[0])
 
         opts = get_xoptions()
         self.assertEqual(opts, {})
@@ -91,8 +90,7 @@ class CmdLineTest(unittest.TestCase):
             # this is similar to assert_python_ok but doesn't strip
             # the refcount from stderr.  It can be replaced once
             # assert_python_ok stops doing that.
-            cmd = [sys.executable]
-            cmd.extend(args)
+            cmd = [sys.executable, *args]
             PIPE = subprocess.PIPE
             p = subprocess.Popen(cmd, stdout=PIPE, stderr=PIPE)
             out, err = p.communicate()
@@ -481,8 +479,8 @@ class CmdLineTest(unittest.TestCase):
             env['__cleanenv'] = '1'  # consumed by assert_python_ok()
         else:
             env = {}
-        for i in range(3):
-            code = 'print(hash("spam"))'
+        code = 'print(hash("spam"))'
+        for _ in range(3):
             rc, out, err = assert_python_ok('-c', code, **env)
             self.assertEqual(rc, 0)
             hashes.append(out)
@@ -572,17 +570,17 @@ class CmdLineTest(unittest.TestCase):
                 PYTHONVERBOSE=value,
             )
             dont_write_bytecode = int(bool(value))
-            code = (
-                "import sys; "
-                "sys.stderr.write(str(sys.flags)); "
-                f"""sys.exit(not (
+            with self.subTest(envar_value=value):
+                code = (
+                    "import sys; "
+                    "sys.stderr.write(str(sys.flags)); "
+                    f"""sys.exit(not (
                     sys.flags.debug == sys.flags.optimize ==
                     sys.flags.verbose ==
                     {expected}
                     and sys.flags.dont_write_bytecode == {dont_write_bytecode}
                 ))"""
-            )
-            with self.subTest(envar_value=value):
+                )
                 assert_python_ok('-c', code, **env_vars)
 
     def test_set_pycache_prefix(self):
@@ -673,10 +671,7 @@ class CmdLineTest(unittest.TestCase):
             code = "import _testcapi; print(_testcapi.pymem_getallocatorsname())"
             with support.SuppressCrashReport():
                 out = self.run_xdev("-c", code, check_exitcode=False)
-            if support.with_pymalloc():
-                alloc_name = "pymalloc_debug"
-            else:
-                alloc_name = "malloc_debug"
+            alloc_name = "pymalloc_debug" if support.with_pymalloc() else "malloc_debug"
             self.assertEqual(out, alloc_name)
 
         # Faulthandler

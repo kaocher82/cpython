@@ -138,10 +138,7 @@ class PrettyPrinter:
         self._depth = depth
         self._indent_per_level = indent
         self._width = width
-        if stream is not None:
-            self._stream = stream
-        else:
-            self._stream = _sys.stdout
+        self._stream = stream if stream is not None else _sys.stdout
         self._compact = bool(compact)
         self._sort_dicts = sort_dicts
         self._underscore_numbers = underscore_numbers

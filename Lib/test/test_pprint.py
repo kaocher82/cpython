@@ -875,7 +875,7 @@ frozenset2({0,
         levels = 20
         number = 10
         o = [0] * number
-        for i in range(levels - 1):
+        for _ in range(levels - 1):
             o = [o]
         for w in range(levels * 2 + 1, levels + 3 * number - 1):
             lines = pprint.pformat(o, width=w, compact=True).splitlines()
