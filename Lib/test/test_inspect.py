@@ -66,14 +66,11 @@ def signatures_with_lexicographic_keyword_only_parameters():
     where those parameters are always in lexicographically sorted order.
     """
     parameters = ['a', 'bar', 'c', 'delta', 'ephraim', 'magical', 'yoyo', 'z']
+    bit = 1
+    symbols = {}
     for i in range(1, 2**len(parameters)):
-        p = []
-        bit = 1
-        for j in range(len(parameters)):
-            if i & (bit << j):
-                p.append(parameters[j])
+        p = [parameters[j] for j in range(len(parameters)) if i & (bit << j)]
         fn_text = "def foo(*, " + ", ".join(p) + "): pass"
-        symbols = {}
         exec(fn_text, symbols, symbols)
         yield symbols['foo']
 
@@ -97,16 +94,20 @@ class IsTestBase(unittest.TestCase):
         self.assertTrue(predicate(obj), '%s(%s)' % (predicate.__name__, exp))
 
         for other in self.predicates - set([predicate]):
-            if (predicate == inspect.isgeneratorfunction or \
-               predicate == inspect.isasyncgenfunction or \
-               predicate == inspect.iscoroutinefunction) and \
-               other == inspect.isfunction:
+            if (
+                predicate
+                in [
+                    inspect.isgeneratorfunction,
+                    inspect.isasyncgenfunction,
+                    inspect.iscoroutinefunction,
+                ]
+                and other == inspect.isfunction
+            ):
                 continue
             self.assertFalse(other(obj), 'not %s(%s)' % (other.__name__, exp))
 
 def generator_function_example(self):
-    for i in range(2):
-        yield i
+    yield from range(2)
 
 async def async_generator_function_example(self):
     async for i in range(2):
@@ -997,8 +998,8 @@ class TestClassesAndFunctions(unittest.TestCase):
                      "Signature information for builtins requires docstrings")
     def test_getfullargspec_builtin_func_no_signature(self):
         import _testcapi
-        builtin = _testcapi.docstring_no_signature
         with self.assertRaises(TypeError):
+            builtin = _testcapi.docstring_no_signature
             inspect.getfullargspec(builtin)
 
     def test_getfullargspec_definition_order_preserved_on_kwonly(self):
@@ -1956,8 +1957,7 @@ class TestGetGeneratorState(unittest.TestCase):
 
     def setUp(self):
         def number_generator():
-            for number in range(5):
-                yield number
+            yield from range(5)
         self.generator = number_generator()
 
     def _generatorstate(self):
@@ -1971,7 +1971,7 @@ class TestGetGeneratorState(unittest.TestCase):
         self.assertEqual(self._generatorstate(), inspect.GEN_SUSPENDED)
 
     def test_closed_after_exhaustion(self):
-        for i in self.generator:
+        for _ in self.generator:
             pass
         self.assertEqual(self._generatorstate(), inspect.GEN_CLOSED)
 
@@ -2056,8 +2056,7 @@ class TestGetCoroutineState(unittest.TestCase):
     def setUp(self):
         @types.coroutine
         def number_coroutine():
-            for number in range(5):
-                yield number
+            yield from range(5)
         async def coroutine():
             await number_coroutine()
         self.coroutine = coroutine()

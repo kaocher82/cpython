@@ -325,10 +325,7 @@ def _args_from_interpreter_flags():
                 'showrefcount', 'utf8'):
         if opt in xoptions:
             value = xoptions[opt]
-            if value is True:
-                arg = opt
-            else:
-                arg = '%s=%s' % (opt, value)
+            arg = opt if value is True else '%s=%s' % (opt, value)
             args.extend(('-X', arg))
 
     return args
@@ -1132,11 +1129,7 @@ class Popen(object):
                 self.stderr.close()
             self.wait()
         else:
-            if timeout is not None:
-                endtime = _time() + timeout
-            else:
-                endtime = None
-
+            endtime = _time() + timeout if timeout is not None else None
             try:
                 stdout, stderr = self._communicate(input, endtime, timeout)
             except KeyboardInterrupt:
@@ -1460,18 +1453,17 @@ class Popen(object):
             in its local scope.
 
             """
-            if self.returncode is None:
-                if _WaitForSingleObject(self._handle, 0) == _WAIT_OBJECT_0:
-                    self.returncode = _GetExitCodeProcess(self._handle)
+            if (
+                self.returncode is None
+                and _WaitForSingleObject(self._handle, 0) == _WAIT_OBJECT_0
+            ):
+                self.returncode = _GetExitCodeProcess(self._handle)
             return self.returncode
 
 
         def _wait(self, timeout):
             """Internal implementation of wait() on Windows."""
-            if timeout is None:
-                timeout_millis = _winapi.INFINITE
-            else:
-                timeout_millis = int(timeout * 1000)
+            timeout_millis = _winapi.INFINITE if timeout is None else int(timeout * 1000)
             if self.returncode is None:
                 # API note: Returns immediately if timeout_millis == 0.
                 result = _winapi.WaitForSingleObject(self._handle,
@@ -1650,10 +1642,12 @@ class Popen(object):
                         sigset.append(signum)
                 kwargs['setsigdef'] = sigset
 
-            file_actions = []
-            for fd in (p2cwrite, c2pread, errread):
-                if fd != -1:
-                    file_actions.append((os.POSIX_SPAWN_CLOSE, fd))
+            file_actions = [
+                (os.POSIX_SPAWN_CLOSE, fd)
+                for fd in (p2cwrite, c2pread, errread)
+                if fd != -1
+            ]
+
             for fd, fd2 in (
                 (p2cread, 0),
                 (c2pwrite, 1),

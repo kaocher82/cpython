@@ -1364,10 +1364,10 @@ def get_terminal_size(fallback=(80, 24)):
             # stdout is None, closed, detached, or not a terminal, or
             # os.get_terminal_size() is unsupported
             size = os.terminal_size(fallback)
-        if columns <= 0:
-            columns = size.columns
-        if lines <= 0:
-            lines = size.lines
+    if columns <= 0:
+        columns = size.columns
+    if lines <= 0:
+        lines = size.lines
 
     return os.terminal_size((columns, lines))
 
@@ -1402,15 +1402,15 @@ def which(cmd, mode=os.F_OK | os.X_OK, path=None):
 
     if path is None:
         path = os.environ.get("PATH", None)
-        if path is None:
-            try:
-                path = os.confstr("CS_PATH")
-            except (AttributeError, ValueError):
-                # os.confstr() or CS_PATH is not available
-                path = os.defpath
-        # bpo-35755: Don't use os.defpath if the PATH environment variable is
-        # set to an empty string
+            # bpo-35755: Don't use os.defpath if the PATH environment variable is
+            # set to an empty string
 
+    if path is None:
+        try:
+            path = os.confstr("CS_PATH")
+        except (AttributeError, ValueError):
+            # os.confstr() or CS_PATH is not available
+            path = os.defpath
     # PATH='' doesn't match, whereas PATH=':' looks in the current directory
     if not path:
         return None
@@ -1452,7 +1452,7 @@ def which(cmd, mode=os.F_OK | os.X_OK, path=None):
     seen = set()
     for dir in path:
         normdir = os.path.normcase(dir)
-        if not normdir in seen:
+        if normdir not in seen:
             seen.add(normdir)
             for thefile in files:
                 name = os.path.join(dir, thefile)

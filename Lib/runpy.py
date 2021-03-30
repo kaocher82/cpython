@@ -259,9 +259,11 @@ def run_path(path_name, init_globals=None, run_name=None):
     importer = get_importer(path_name)
     # Trying to avoid importing imp so as to not consume the deprecation warning.
     is_NullImporter = False
-    if type(importer).__module__ == 'imp':
-        if type(importer).__name__ == 'NullImporter':
-            is_NullImporter = True
+    if (
+        type(importer).__module__ == 'imp'
+        and type(importer).__name__ == 'NullImporter'
+    ):
+        is_NullImporter = True
     if isinstance(importer, type(None)) or is_NullImporter:
         # Not a valid sys.path entry, so run the code directly
         # execfile() doesn't help as we want to allow compiled files

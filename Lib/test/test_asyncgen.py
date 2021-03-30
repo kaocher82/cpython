@@ -47,49 +47,49 @@ def to_list(gen):
 class AsyncGenSyntaxTest(unittest.TestCase):
 
     def test_async_gen_syntax_01(self):
-        code = '''async def foo():
+        with self.assertRaisesRegex(SyntaxError, 'yield from.*inside async'):
+            code = '''async def foo():
             await abc
             yield from 123
         '''
 
-        with self.assertRaisesRegex(SyntaxError, 'yield from.*inside async'):
             exec(code, {}, {})
 
     def test_async_gen_syntax_02(self):
-        code = '''async def foo():
+        with self.assertRaisesRegex(SyntaxError, 'yield from.*inside async'):
+            code = '''async def foo():
             yield from 123
         '''
 
-        with self.assertRaisesRegex(SyntaxError, 'yield from.*inside async'):
             exec(code, {}, {})
 
     def test_async_gen_syntax_03(self):
-        code = '''async def foo():
+        with self.assertRaisesRegex(SyntaxError, 'return.*value.*async gen'):
+            code = '''async def foo():
             await abc
             yield
             return 123
         '''
 
-        with self.assertRaisesRegex(SyntaxError, 'return.*value.*async gen'):
             exec(code, {}, {})
 
     def test_async_gen_syntax_04(self):
-        code = '''async def foo():
+        with self.assertRaisesRegex(SyntaxError, 'return.*value.*async gen'):
+            code = '''async def foo():
             yield
             return 123
         '''
 
-        with self.assertRaisesRegex(SyntaxError, 'return.*value.*async gen'):
             exec(code, {}, {})
 
     def test_async_gen_syntax_05(self):
-        code = '''async def foo():
+        with self.assertRaisesRegex(SyntaxError, 'return.*value.*async gen'):
+            code = '''async def foo():
             if 0:
                 yield
             return 12
         '''
 
-        with self.assertRaisesRegex(SyntaxError, 'return.*value.*async gen'):
             exec(code, {}, {})
 
 
@@ -119,10 +119,9 @@ class AsyncGenTest(unittest.TestCase):
                         except StopIteration as ex:
                             if ex.args:
                                 res.append(ex.args[0])
-                                break
                             else:
                                 res.append('EMPTY StopIteration')
-                                break
+                            break
                         except StopAsyncIteration:
                             raise
                         except Exception as ex:
@@ -378,8 +377,7 @@ class AsyncGenAsyncioTest(unittest.TestCase):
             yield 2
         g = gen()
         async def consume():
-            results = []
-            results.append(await anext(g))
+            results = [await anext(g)]
             results.append(await anext(g))
             results.append(await anext(g, 'buckle my shoe'))
             return results
@@ -467,7 +465,6 @@ class AsyncGenAsyncioTest(unittest.TestCase):
             yield 2
             await asyncio.sleep(0.01)
             return
-            yield 3
 
         res = self.loop.run_until_complete(self.to_list(gen()))
         self.assertEqual(res, [1, 2])
@@ -1203,7 +1200,7 @@ class AsyncGenAsyncioTest(unittest.TestCase):
             loop = asyncio.get_running_loop()
             loop.set_exception_handler(exception_handler)
 
-            async for i in async_iterate():
+            async for _ in async_iterate():
                 break
 
         asyncio.run(main())

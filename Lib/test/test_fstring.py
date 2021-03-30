@@ -1046,26 +1046,17 @@ x = (
 
         def test_fstring(x, expected):
             flag = 0
-            if f'{x}':
-                flag = 1
-            else:
-                flag = 2
+            flag = 1 if f'{x}' else 2
             self.assertEqual(flag, expected)
 
         def test_concat_empty(x, expected):
             flag = 0
-            if '' f'{x}':
-                flag = 1
-            else:
-                flag = 2
+            flag = 1 if '' f'{x}' else 2
             self.assertEqual(flag, expected)
 
         def test_concat_non_empty(x, expected):
             flag = 0
-            if ' ' f'{x}':
-                flag = 1
-            else:
-                flag = 2
+            flag = 1 if ' ' f'{x}' else 2
             self.assertEqual(flag, expected)
 
         test_fstring('', 2)
